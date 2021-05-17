@@ -47,8 +47,8 @@ print('Number of images in the test dataset: ', test_img_count)
 # 16 works well on most GPU
 # 256 works well on NVIDIA RTX 3090 with 24 GB VRAM
 batch_size = 16
-img_width = 320
-img_height = 240
+img_width = 240
+img_height = 320
 IMG_SIZE = (img_height, img_width)
 IMG_SHAPE = IMG_SIZE + (3,)
 
@@ -80,6 +80,11 @@ test_ds = tf.keras.preprocessing.image_dataset_from_directory(
 # check the names of the classes
 class_names = train_ds.class_names
 print(class_names)
+
+# save an example image
+for batch in test_ds:
+    tf.keras.preprocessing.image.save_img("test-image.png", batch[0][0])
+    break
 
 # As the dataset is imbalanced, is is necessary to get weights for each class
 
@@ -122,7 +127,7 @@ data_augmentation = tf.keras.Sequential([
 
 # rescale pixel values
 preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
-rescale = tf.keras.layers.experimental.preprocessing.Rescaling(1./127.5, offset= -1)
+#rescale = tf.keras.layers.experimental.preprocessing.Rescaling(1./127.5, offset= -1)
 
 
 base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
@@ -131,6 +136,13 @@ base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
 
 # freeze the convolutional base
 base_model.trainable = False
+
+#trainable = 9
+#for layer in base_model.layers[:-trainable]:
+#        layer.trainable = False
+#for layer in base_model.layers[-trainable:]:
+#    layer.trainable = True
+
 
 # Build the model
 inputs = tf.keras.Input(shape=IMG_SHAPE)
@@ -148,7 +160,7 @@ model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.008),
               metrics=['accuracy'])
 
 #number_of_epochs = 30
-number_of_epochs = 10
+number_of_epochs = 15
 
 # callbacks to implement early stopping and saving the model
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)

@@ -38,17 +38,23 @@ TOTAL_ANNOTATORS = 8
 IS_WASHING_PROPORTION = 1/1.8
 
 # reduce the number of frames taken to improve training speed for is washing classification
-FRAME_POOLING = 10
+FRAME_POOLING = 5
 
 # if supplementary info is present, and this parameter set to True,
 # then for the is/isn't washing classification only images where hands have been detected are used.
 ONLY_NONWASHING_WITH_HANDS = True
 
+# allow up to 1 second for reaction time
+REACTION_TIME_FRAMES = 30
+
+# ignore frames above this duration threshold
+MAX_FRAMES = 30 * 30
+
 if ONLY_NONWASHING_WITH_HANDS:
     # reduce the frame pooling
-    FRAME_POOLING = 4
+    FRAME_POOLING = 3
     # reduce the proportion
-    IS_WASHING_PROPORTION = 0.35
+    IS_WASHING_PROPORTION = 0.18
 
 def majority_vote(lst):
     """Returns the element present in majority of the list, or -1 otherwise
@@ -74,6 +80,21 @@ def mk(directory):
             os.mkdir(so_far)
         except:
             pass
+
+def discount_reaction_indeterminacy(labels):
+    new_labels = [u for u in labels]
+    n = len(labels) - 1
+    for i in range(n):
+        if i == 0 or labels[i] != labels[i+1] or i == n - 1:
+            start = max(0, i - REACTION_TIME_FRAMES)
+            end = i
+            for j in range(start, end):
+                new_labels[j] = -1
+            start = i
+            end = min(n + 1, i + REACTION_TIME_FRAMES)
+            for j in range(start, end):
+                new_labels[j] = -1
+    return new_labels
 
 
 def find_frame_labels(fullpath):
@@ -148,6 +169,9 @@ def find_frame_labels(fullpath):
                 pad_len = len(is_washing) - len(frames_with_hands)
                 frames_with_hands += [0] * pad_len
 
+    is_washing = discount_reaction_indeterminacy(is_washing)
+    codes = discount_reaction_indeterminacy(codes)
+
     return is_washing, codes, frames_with_hands, num_annotators
 
 
@@ -170,6 +194,7 @@ def get_frames(folder):
     for subdir, dirs, files in os.walk(os.path.join(input_folder, folder)):
         for videofile in files:
             if videofile.endswith(".mp4"):
+                #print(videofile)
                 N_of_videofiles += 1
 
                 fullpath = os.path.join(subdir, videofile)
@@ -186,6 +211,8 @@ def get_frames(folder):
                 else:
                     traintest = "trainval"
 
+                #print(is_washing)
+
                 while is_success:
                     N_of_frames_considered += 1
 
@@ -197,7 +224,7 @@ def get_frames(folder):
                         else:
                             if len(frames_with_hands):
                                 if bool(frames_with_hands[frame_number]) != bool(is_washing[frame_number]):
-                                    if is_washing[frame_number]:
+                                    if is_washing[frame_number] == 2:
                                         #print("warning: hands not detected in frame, but is washing!")
                                         is_ok = False
                                     else:
@@ -207,7 +234,7 @@ def get_frames(folder):
                                         N_of_saved_no_washing_with_hands_frames += 1
                                 else:
                                     if ONLY_NONWASHING_WITH_HANDS:
-                                        if is_washing[frame_number]:
+                                        if is_washing[frame_number] == 2:
                                             # is washing and has hands
                                             is_ok = random.random() < IS_WASHING_PROPORTION
                                         else:
@@ -216,13 +243,9 @@ def get_frames(folder):
                                     else:
                                         # both equal; skip most of such frames
                                         is_ok = random.random() < IS_WASHING_PROPORTION
-                                        if is_washing[frame_number]:
-                                            # apply the filter double
-                                            if is_ok:
-                                                is_ok = random.random() < IS_WASHING_PROPORTION
-                                        else:
-                                            # a single filter, but remember that this is an ordinary no-washing frame
-                                            if is_ok:
+                                        if is_ok:
+                                            if is_washing[frame_number] == 2:
+                                                # remember that this is an ordinary no-washing frame
                                                 N_of_saved_no_washing_no_hands_frames += 1
 
                             # no supplementary info
@@ -254,6 +277,8 @@ def get_frames(folder):
 
                     is_success, image = vidcap.read()
                     frame_number += 1
+                    if frame_number > MAX_FRAMES:
+                        break
 
 
     N_of_nonmatching_frames = N_of_frames_washing - N_of_matching_frames
