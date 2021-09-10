@@ -106,7 +106,6 @@ def evaluate_all_experiments():
             n += 1
 #            if n > 2:
 #                break
-        break
     
     print("non-windowed")
     print_scores(y_true, y_predicted)
@@ -143,21 +142,6 @@ def measure_performance(model, ds, filename=None):
             y_predicted.append(int(np.argmax(y_pred)))
             y_true.append(int(np.argmax(y_t)))
             n += 1
-#            if n % 100 == 0:
-#                print(n)
-#                break
-#        if n % 100 == 0:
-#            break
-
-    if filename:
-        json_filename = os.path.splitext(filename)[0] + ".json"
-        with open(json_filename, "w") as outf:
-            outf.write("{\n")
-            s = ", ".join([str(u) for u in y_true])
-            outf.write('  "true": [' + s  + '],\n')
-            s = ", ".join([str(u) for u in y_predicted])
-            outf.write('  "predicted": [' + s + ']\n')
-            outf.write("}\n")
 
     ts = [get_frame_number(f) for f in ds.file_paths]
     m = min(ts)
@@ -168,6 +152,17 @@ def measure_performance(model, ds, filename=None):
         frame_codes_t[ts[i]] = y_t
     for i, y_p in enumerate(y_predicted):
         frame_codes_p[ts[i]] = y_p
+
+    if filename:
+        json_filename = os.path.splitext(filename)[0] + ".json"
+        with open(json_filename, "w") as outf:
+            outf.write("{\n")
+            s = ", ".join([str(u) for u in frame_codes_t])
+            outf.write('  "true": [' + s  + '],\n')
+            s = ", ".join([str(u) for u in frame_codes_p])
+            outf.write('  "predicted": [' + s + ']\n')
+            outf.write("}\n")
+
     window_codes_t = windowize_ground_truth(frame_codes_t)
     window_codes_p = windowize_predicted(frame_codes_p)
     return (y_true, y_predicted, window_codes_t, window_codes_p)
