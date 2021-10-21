@@ -4,6 +4,9 @@ import numpy as np
 import os
 import json
 
+import matplotlib.pyplot as pl
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
 FRAME_TIME = 0.05 # XXX very approximate
 
 NUM_MOVEMENTS = 7
@@ -57,10 +60,10 @@ def evaluate_all_experiments():
             window_p += wp
     
     print("non-windowed")
-    print_scores(y_true, y_predicted)
+    print_scores(y_true, y_predicted, "cm-non-windowed.png")
     
     print("\nwindowed")
-    print_scores(window_t, window_p)
+    print_scores(window_t, window_p, "cm-windowed.png")
 
 #    print("\nall movements done in washing episode?")
 #    print_scores(all_done_true, all_done_predicted)
@@ -147,18 +150,29 @@ def windowize_predicted_median_filter(array):
     return output
 
 
-def print_scores(y_true, y_predicted):
+def print_scores(y_true, y_predicted, plot_filename):
     num_classes = max(max(y_true), max(y_predicted)) + 1
     matrix = [[0] * num_classes for i in range(num_classes)]
+
+    y_true_only_valid = []
+    y_predicted_only_valid = []
+
     for actual, predicted in zip(y_true, y_predicted):
         if actual == -1:
             continue
         matrix[actual][predicted] += 1
-    
+        y_true_only_valid.append(actual)
+        y_predicted_only_valid.append(predicted)
+
     print("Confusion matrix:")
     for row in matrix:
         print(row)
-    
+
+    # visualize the matrix
+    #cm = confusion_matrix(y_true_only_valid, y_predicted_only_valid)
+    ConfusionMatrixDisplay.from_predictions(y_true_only_valid, y_predicted_only_valid, normalize="true")
+    pl.savefig(plot_filename, format="png" if ".png" in plot_filename else "pdf")
+
     f1_scores = []
     for i in range(num_classes):
         total = sum(matrix[i])
