@@ -20,8 +20,8 @@ import random
 output_folder = './'
 input_folder = '../merged_handwash_data'
 
-# movement 0 is large part of the dataset; use only 20% of all frames
-MOVEMENT_0_PROPORTION = 0.2
+# movement 0 is large part of the dataset; use only 10% of all frames
+MOVEMENT_0_PROPORTION = 0.1
 
 # the movement codes are from 0 to 7
 TOTAL_MOVEMENTS = 8
@@ -32,8 +32,10 @@ TOTAL_ANNOTATORS = 8
 # allow up to 1 second for reaction time
 REACTION_TIME_FRAMES = 30
 
+FPS = 30
+
 # ignore frames above this duration threshold
-MAX_FRAMES = 30 * 30
+MAX_FRAMES = 60 * FPS
 
 
 def majority_vote(lst):
@@ -149,8 +151,9 @@ def find_frame_labels(fullpath):
                 pad_len = len(is_washing) - len(frames_with_hands)
                 frames_with_hands += [0] * pad_len
 
-    is_washing = discount_reaction_indeterminacy(is_washing)
-    codes = discount_reaction_indeterminacy(codes)
+    if False:
+        is_washing = discount_reaction_indeterminacy(is_washing)
+        codes = discount_reaction_indeterminacy(codes)
 
     return is_washing, codes, frames_with_hands, num_annotators
 
