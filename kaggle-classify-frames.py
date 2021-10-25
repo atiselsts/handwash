@@ -73,6 +73,12 @@ for item in range(len(weights)):
     weights_dict[int(class_names[item])] = weights[item]
 print("weights_dict=", weights_dict)
 
+# to improve performance, use buffered prefetching to load images
+AUTOTUNE = tf.data.experimental.AUTOTUNE
+
+train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
+val_ds = val_ds.prefetch(buffer_size=AUTOTUNE)
+
 
 # data augmentation
 data_augmentation = tf.keras.Sequential([
@@ -124,8 +130,8 @@ number_of_epochs = 10
 # callbacks to implement early stopping and saving the model
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
 mc = ModelCheckpoint(monitor='val_accuracy', mode='max',
-                     verbose=1, save_freq='epoch', 
-                     filepath='all-classification-sgd-MobileNetV2.{epoch:02d}-{val_accuracy:.2f}.h5')
+                     verbose=1, save_freq='epoch',
+                     filepath='kaggle-single-frame.{epoch:02d}-{val_accuracy:.2f}.h5')
 
 print("fitting the model...")
 history = model.fit(train_ds,
