@@ -28,8 +28,9 @@ IMG_SHAPE = IMG_SIZE + (3,)
 
 train_ds = tf.keras.preprocessing.image_dataset_from_directory(
   data_dir,
-  validation_split=0.2,
-  subset="training",
+  validation_split=0.01,
+#  subset="training",
+  subset="validation",
   seed=123,
   image_size=IMG_SIZE,
   label_mode='categorical',
@@ -43,6 +44,8 @@ val_ds = tf.keras.preprocessing.image_dataset_from_directory(
   image_size=IMG_SIZE,
   label_mode='categorical',
   batch_size=batch_size)
+
+val_ds = train_ds
 
 # check the names of the classes
 class_names = train_ds.class_names
@@ -116,7 +119,7 @@ model.compile(optimizer='SGD',
               loss=tf.keras.losses.CategoricalCrossentropy(),
               metrics=['accuracy'])
 
-number_of_epochs = 20
+number_of_epochs = 10
 
 # callbacks to implement early stopping and saving the model
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)

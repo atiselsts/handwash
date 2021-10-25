@@ -10,13 +10,13 @@ from tensorflow.keras.preprocessing import image_dataset_from_directory
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras_video import VideoFrameGenerator
 
-if 0:
+if 1:
     physical_devices = tf.config.list_physical_devices('GPU')
     if len(physical_devices):
         tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # make sure to provide correct paths to the folders on your machine
-data_dir = '../datasets/kaggle-dataset-6classes/'
+data_dir = '../kaggle-dataset-6classes/'
 
 # Define parameters for the dataset loader.
 # Adjust batch size according to the memory volume of your GPU;
@@ -29,7 +29,9 @@ IMG_SIZE = (img_height, img_width)
 N_CHANNELS = 3
 IMG_SHAPE = IMG_SIZE + (N_CHANNELS,)
 
-BATCH_SIZE = 1
+BATCH_SIZE = 4
+
+FPS = 30
 
 CLASS_NAMES = ['0', '1', '2', '3', '4', '5', '6']
 N_CLASSES = len(CLASS_NAMES)
@@ -51,20 +53,30 @@ data_aug = tf.keras.preprocessing.image.ImageDataGenerator(
     horizontal_flip=True,
     rotation_range=60) # 60 degrees
 
-train_gen = VideoFrameGenerator(
+train_ds = VideoFrameGenerator(
     classes=CLASS_NAMES, 
     glob_pattern=GLOB_PATTERN,
     nb_frames=N_FRAMES,
     split_val=0.2, 
-    shuffle=True,
+    shuffle=False,
     batch_size=BATCH_SIZE,
-    target_shape=IMG_SIZE[::-1],
+    target_shape=(img_width, img_height),
     nb_channel=N_CHANNELS,
     rescale=1,
+    frame_step = FPS // N_FRAMES,
     transformation=data_aug,
     use_frame_cache=False)
 
-val_gen = train_gen.get_validation_generator()
+val_ds = train_ds.get_validation_generator()
+
+#ds_size = 0
+#for batch in train_ds:
+#    b1, b2 = batch
+#    for b in b1:
+#        ds_size += 1
+
+#print("num ds elements:", ds_size)
+#exit(0)
 
 
 #train_ds = tf.keras.preprocessing.image_dataset_from_directory(
@@ -126,55 +138,49 @@ val_gen = train_gen.get_validation_generator()
 
 
 base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
-                                              include_top=False,
+                                               include_top=False,
+                                               pooling='avg',
                                                weights='imagenet')
 
 # freeze the convolutional base
 base_model.trainable = False
-trainable = 3
-for layer in base_model.layers[:-trainable]:
+#trainable = 0
+#for layer in base_model.layers[:-trainable]:
+#    layer.trainable = False
+#for layer in base_model.layers[-trainable:]:
+#    layer.trainable = True
+for layer in base_model.layers:
     layer.trainable = False
-for layer in base_model.layers[-trainable:]:
-    layer.trainable = True
-
-#print(base_model.summary())
-
-# Build the model
-#inputs = tf.keras.Input(shape=IMG_SHAPE)
-#x = inputs
-#x = data_augmentation(inputs)
-#x = preprocess_input(x)
-#x = base_model(x, training=False)
-#x = tf.keras.layers.Flatten()(x)
-#x = tf.keras.layers.BatchNormalization()(x)
-#outputs = tf.keras.layers.Dense(len(class_names), activation='softmax')(x)
-#model = tf.keras.Model(inputs, outputs)
-
-#print(model.summary())
 
 def return_end_model():
+    INPUT_SHAPE = (N_FRAMES,) + IMG_SHAPE
+
     inputs = tf.keras.Input(shape=INPUT_SHAPE)
     x = tf.keras.applications.mobilenet.preprocess_input(inputs)
-    x = tf.keras.layers.TimeDistributed(convnet)(x)
-    x = tf.keras.layers.GRU(256)(x)
-    x = base_model(x, training=False)
-    x = tf.keras.layers.Flatten()(x)
-    outputs = tf.keras.layers.Dense(N_CLASSES, activation='softmax')(x)
+
+    encoded_frames = tf.keras.layers.TimeDistributed(base_model)(x)
+#    encoded_sequence = tf.keras.layers.LSTM(256)(encoded_frames)
+    encoded_sequence = tf.keras.layers.GRU(256)(encoded_frames)
+
+#    hidden_layer = tf.keras.layers.Dense(1024, activation="relu")(encoded_sequence)
+#    outputs = tf.keras.layers.Dense(N_CLASSES, activation="softmax")(hidden_layer)
+
+    outputs = tf.keras.layers.Dense(N_CLASSES, activation="softmax")(encoded_sequence)
+
     model = tf.keras.Model(inputs, outputs)
     return model
 
 model = return_end_model()
 
 #print("compiling the model...")
+#base_learning_rate = 0.001 #0.0005 #0.00005
 model.compile(optimizer='SGD',
               loss=tf.keras.losses.CategoricalCrossentropy(),
               metrics=['accuracy'])
 
 print(model.summary())
-exit(0)
 
-
-number_of_epochs = 1
+number_of_epochs = 10
 
 # callbacks to implement early stopping and saving the model
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
@@ -186,8 +192,9 @@ print("fitting the model...")
 history = model.fit(train_ds,
                     epochs=number_of_epochs,
                     validation_data=val_ds,
-                    class_weight=weights_dict,
-                    callbacks=[es, mc])
+#                    class_weight=weights_dict,
+#                    callbacks=[es, mc]
+                    )
 
 # visualise accuracy
 train_acc = history.history['accuracy']
