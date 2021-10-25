@@ -66,13 +66,17 @@ val_ds = train_ds.get_validation_generator()
 
 base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                include_top=False,
-                                               pooling='avg',
+                                               pooling='max',
                                                weights='imagenet')
+print("base model constructed...")
 
 # freeze the convolutional base
 base_model.trainable = False
-for layer in base_model.layers:
+trainable = 3
+for layer in base_model.layers[:-trainable]:
     layer.trainable = False
+for layer in base_model.layers[-trainable:]:
+    layer.trainable = True
 
 def return_end_model():
     INPUT_SHAPE = (N_FRAMES,) + IMG_SHAPE

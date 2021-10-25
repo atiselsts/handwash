@@ -90,7 +90,7 @@ data_augmentation = tf.keras.Sequential([
 
 # rescale pixel values
 preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
-rescale = tf.keras.layers.experimental.preprocessing.Rescaling(1./127.5, offset= -1)
+#rescale = tf.keras.layers.experimental.preprocessing.Rescaling(1./127.5, offset= -1)
 
 
 base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
