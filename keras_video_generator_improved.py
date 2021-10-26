@@ -196,16 +196,19 @@ class VideoFrameGenerator(Sequence):
 
         print("counting frames...")
         self.num_frames = 0
-        self.num_sequences = 0
+        self.num_items = 0
         self._framecounters = {}
-        self._sequencecounters = {}
-        self._items = [] # (i, video_name, first_frame_position)
-        for video in self.files:
+        self._items_per_file = {} # file -> [(i, video_name, first_frame_position, last_frame_position)]
+        for i in range(len(self.files)):
+            video = self.files[i]
             cap = cv.VideoCapture(video)
-            self.count_frames(cap, video)
-            self.num_frames += self._framecounters[video]
-            self.num_sequences += self._sequencecounters[video]
+            self.num_frames += self.count_frames(cap, i)
             cap.release()
+
+        if self.shuffle:
+            np.random.shuffle(self.file_indexes)
+        self._items = self.create_items_list(self.file_indexes)
+   
         #print("num_frames=", self.num_frames, "num_sequences=", self.num_sequences)
         #for i in self._items:
         #     print(i)
@@ -226,48 +229,55 @@ class VideoFrameGenerator(Sequence):
             self.files_count,
             kind))
 
-    def count_frames(self, cap, name, force_no_headers=False):
+    def create_items_list(self, file_indexes):
+        items = []
+        #print("create_items_list")
+        for file_index in file_indexes:
+            #print("file_index", file_index)
+            items += self._items_per_file[file_index]
+        return items
+
+    def count_frames(self, cap, file_index, force_no_headers=False):
         """ Count number of frame for video
         if it's not possible with headers """
-        if not force_no_headers and name in self._framecounters:
-            return self._framecounters[name]
+        file_name = self.files[file_index]
+        if not force_no_headers and file_name in self._framecounters:
+            return self._framecounters[file_name]
 
-        total = cap.get(cv.CAP_PROP_FRAME_COUNT)
+        total_frames = cap.get(cv.CAP_PROP_FRAME_COUNT)
 
-        if force_no_headers or total < 0:
+        if force_no_headers or total_frames < 0:
             # headers not ok
             total = 0
             # TODO: we're unable to use CAP_PROP_POS_FRAME here
             # so we open a new capture to not change the
             # pointer position of "cap"
-            c = cv.VideoCapture(name)
+            c = cv.VideoCapture(file_name)
             while True:
                 grabbed, frame = c.read()
                 if not grabbed:
                     # rewind and stop
                     break
-                total += 1
+                total_frames += 1
 
         # keep the result
-        self._framecounters[name] = int(total)
+        self._framecounters[file_name] = int(total_frames)
 
-        num_sequences = 0
         chunk_offset = (self.frame_step - 1) * self.nb_frames
         start_frame_num = 0
         end_frame_num = chunk_offset
-        while end_frame_num < int(total):
-            n_so_far = len(self._items)
-            self._items.append((n_so_far, name, start_frame_num, end_frame_num))
-            num_sequences += 1
+        self._items_per_file[file_index] = []
+        while end_frame_num < int(total_frames):
+            self._items_per_file[file_index].append((self.num_items, file_name, start_frame_num, end_frame_num))
+            self.num_items += 1
             start_frame_num += 1
             end_frame_num += 1
             if start_frame_num % self.nb_frames == 0:
                 # move to the next chunk in the video
                 start_frame_num += chunk_offset
                 end_frame_num += chunk_offset
-        self._sequencecounters[name] = num_sequences
 
-        return total
+        return total_frames
 
     def _discover_classes(self):
         pattern = os.path.realpath(self.glob_pattern)
@@ -325,18 +335,19 @@ class VideoFrameGenerator(Sequence):
     def on_epoch_end(self):
         """ Called by Keras after each epoch """
 
-        print("on_epoch_end")
         if self.transformation is not None:
             self._random_trans = []
-            for _ in range(self.num_sequences):
+            for _ in range(self.num_items):
                 self._random_trans.append(
                     self.transformation.get_random_transform(self.target_shape)
                 )
 
         self.__frame_cache = {} # clear the old frame cache
 
-#        if self.shuffle:
-#            np.random.shuffle(self.file_indexes)
+        if self.shuffle:
+            print("\non_epoch_end: shuffle\n")
+            np.random.shuffle(self.file_indexes)
+            self._items = self.create_items_list(self.file_indexes)
 
     def __iter__(self):
         return self
@@ -345,7 +356,7 @@ class VideoFrameGenerator(Sequence):
         return self.next()
 
     def __len__(self):
-        return self.num_sequences // self.batch_size
+        return self.num_items // self.batch_size
 
     def __getitem__(self, index):
         classes = self.classes
@@ -357,7 +368,7 @@ class VideoFrameGenerator(Sequence):
 
         batch_items = self._items[index*self.batch_size:(index+1)*self.batch_size]
 
-#        print(F"getitem index={index} batch_size={self.batch_size} batch_items={batch_items}")
+        #print(F"getitem index={index} batch_size={self.batch_size} batch_items={batch_items}")
 
         transformation = None
 
@@ -428,21 +439,10 @@ class VideoFrameGenerator(Sequence):
         return classname
 
     def _get_frames(self, video):
-#        print("get frames from", video)
+        #print("get frames from", video, "\n")
         cap = cv.VideoCapture(video)
-        expected_frames = self._framecounters[video] #self.count_frames(cap, video, force_no_headers)
-#        orig_total = total_frames
-#        if total_frames % 2 != 0:
-#            total_frames += 1
-        #frame_step = floor(total_frames/(nb_frames-1))
-#        print("frame_step=", self.frame_step)
-#        # TODO: fix that, a tiny video can have a frame_step that is
-        # under 1
-        #frame_step = max(1, frame_step)
+        expected_frames = self._framecounters[video]
         frames = []
-#        frame_i = 0
-
-#        frame_nums = []
 
         while True:
             grabbed, frame = cap.read()
