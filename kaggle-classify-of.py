@@ -14,7 +14,7 @@ if len(physical_devices):
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # make sure to provide correct paths to the folders on your machine
-data_dir = '../kaggle-dataset-6classes-frames/'
+data_dir = '../kaggle-dataset-6classes-of/'
 
 # Define parameters for the dataset loader.
 # Adjust batch size according to the memory volume of your GPU;
