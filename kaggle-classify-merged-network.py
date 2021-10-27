@@ -20,8 +20,8 @@ if len(physical_devices):
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # make sure to provide correct paths to the folders on your machine
-rgb_dir = '../kaggle-dataset-6classes-frames-2'
-of_dir = '../kaggle-dataset-6classes-of-2'
+rgb_dir = '../kaggle-dataset-6classes-frames'
+of_dir = '../kaggle-dataset-6classes-of'
 
 # Define parameters for the dataset loader.
 # Adjust batch size according to the memory volume of your GPU;
@@ -32,6 +32,73 @@ img_width = 320
 img_height = 240
 IMG_SIZE = (img_height, img_width)
 IMG_SHAPE = IMG_SIZE + (3,)
+
+N_CLASSES = 7
+
+
+# data augmentation
+data_augmentation = tf.keras.Sequential([
+  tf.keras.layers.experimental.preprocessing.RandomFlip('horizontal'),
+  tf.keras.layers.experimental.preprocessing.RandomRotation(0.2),
+])
+
+
+
+# rescale pixel values
+preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
+
+
+base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
+                                               include_top=False,
+                                               weights='imagenet')
+base_model.trainable = False
+for layer in base_model.layers:
+    layer.trainable = False
+
+# Build the model
+rgb_network_input = tf.keras.Input(shape=IMG_SHAPE)
+rgb_network = data_augmentation(rgb_network_input)
+rgb_network = preprocess_input(rgb_network)
+rgb_network = base_model(rgb_network, training=False)
+rgb_network = tf.keras.layers.Flatten()(rgb_network)
+rgb_network = tf.keras.Model(rgb_network_input, rgb_network)
+
+for layer in rgb_network.layers:
+    layer._name = "rgb_" + layer.name
+
+of_network_input = tf.keras.Input(shape=IMG_SHAPE)
+of_network = data_augmentation(of_network_input)
+of_network = preprocess_input(of_network)
+of_network = base_model(of_network, training=False)
+of_network = tf.keras.layers.Flatten()(of_network)
+of_network = tf.keras.Model(of_network_input, of_network)
+
+for layer in of_network.layers:
+    layer._name = "of_" + layer.name
+
+merged = tf.keras.layers.concatenate([rgb_network.output, of_network.output], axis=1)
+merged = tf.keras.layers.Flatten()(merged)
+#merged = tf.keras.layers.Dense(64, activation='relu')(merged)
+merged = tf.keras.layers.Dense(N_CLASSES, activation='softmax')(merged)
+
+model = tf.keras.Model([rgb_network.input, of_network.input], merged)
+
+print(model.summary())
+
+print("compiling the model...")
+model.compile(optimizer='SGD',
+              loss=tf.keras.losses.CategoricalCrossentropy(),
+              metrics=['accuracy'])
+
+model.save("test.h5")
+
+number_of_epochs = 10
+
+# callbacks to implement early stopping and saving the model
+es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
+mc = ModelCheckpoint(monitor='val_accuracy', mode='max',
+                     verbose=1, save_freq='epoch',
+                     filepath='kaggle-single-frame-merged-of.{epoch:02d}-{val_accuracy:.2f}.h5')
 
 
 train_ds = merged_dataset_from_directories(
@@ -88,84 +155,6 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
 val_ds = val_ds.prefetch(buffer_size=AUTOTUNE)
 
-
-# data augmentation
-data_augmentation = tf.keras.Sequential([
-  tf.keras.layers.experimental.preprocessing.RandomFlip('horizontal'),
-  tf.keras.layers.experimental.preprocessing.RandomRotation(0.2),
-])
-
-
-
-# rescale pixel values
-preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
-
-
-def get_base_model(top_model, name):
-    base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
-                                                   include_top=False,
-                                                   weights='imagenet')
-    # freeze the convolutional base
-    base_model.trainable = False
-    trainable = 0
-    for layer in base_model.layers[:-trainable]:
-        layer.trainable = False
-    for layer in base_model.layers[-trainable:]:
-        layer.trainable = True
-
-    # rename layers
-    for layer in base_model.layers:
-        layer._name = name + "_" + layer.name
-    return base_model(top_model, training=False)
-
-
-# Build the model
-rgb_network_input = tf.keras.Input(shape=IMG_SHAPE)
-rgb_network = data_augmentation(rgb_network_input)
-rgb_network = preprocess_input(rgb_network)
-rgb_network = get_base_model(rgb_network, "rgb")
-rgb_network = tf.keras.layers.Flatten()(rgb_network)
-rgb_network = tf.keras.Model(rgb_network_input, rgb_network)
-
-for layer in rgb_network.layers:
-    layer._name = "rbg_" + layer.name
-
-of_network_input = tf.keras.Input(shape=IMG_SHAPE)
-of_network = data_augmentation(of_network_input)
-of_network = preprocess_input(of_network)
-of_network = get_base_model(of_network, "of")
-of_network = tf.keras.layers.Flatten()(of_network)
-of_network = tf.keras.Model(of_network_input, of_network)
-
-for layer in of_network.layers:
-    layer._name = "of_" + layer.name
-
-concatenated_layers = tf.keras.layers.concatenate(
-    [rgb_network.output,
-     of_network.output],
-     axis=1)
-
-merged_streams_flatten_layer = tf.keras.layers.Flatten()(concatenated_layers)
-merged_streams_first_dense = tf.keras.layers.Dense(64, activation='relu')(merged_streams_flatten_layer)
-merged_output = tf.keras.layers.Dense(len(class_names), activation='softmax')(merged_streams_first_dense)
-
-model = tf.keras.Model([rgb_network.input, of_network.input],
-                       merged_output)
-
-print(model.summary())
-
-print("compiling the model...")
-model.compile(optimizer='SGD',
-              loss=tf.keras.losses.CategoricalCrossentropy(),
-              metrics=['accuracy'])
-
-number_of_epochs = 10
-
-# callbacks to implement early stopping and saving the model
-es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
-mc = ModelCheckpoint(monitor='val_accuracy', mode='max',
-                     verbose=1, save_freq='epoch',
-                     filepath='kaggle-single-frame-merged-of.{epoch:02d}-{val_accuracy:.2f}.h5')
 
 print("fitting the model...")
 history = model.fit(train_ds,

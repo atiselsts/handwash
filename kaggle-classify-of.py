@@ -44,8 +44,6 @@ val_ds = tf.keras.preprocessing.image_dataset_from_directory(
   label_mode='categorical',
   batch_size=batch_size)
 
-val_ds = train_ds
-
 # check the names of the classes
 class_names = train_ds.class_names
 print(class_names)
