@@ -51,7 +51,7 @@ preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
 base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                include_top=False,
                                                weights='imagenet')
-base_model.trainable = False
+#base_model.trainable = False
 for layer in base_model.layers:
     layer.trainable = False
 
@@ -92,7 +92,7 @@ model.compile(optimizer='SGD',
 
 model.save("test.h5")
 
-number_of_epochs = 10
+number_of_epochs = 5
 
 # callbacks to implement early stopping and saving the model
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
@@ -175,4 +175,4 @@ plt.legend(loc='lower right')
 plt.ylabel('Accuracy')
 plt.ylim([min(plt.ylim()),1])
 plt.title('Training and Validation Accuracy')
-plt.savefig("accuracy.pdf", format="pdf")
+plt.savefig("accuracy-merged-network.pdf", format="pdf")

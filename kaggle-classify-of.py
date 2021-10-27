@@ -96,11 +96,16 @@ base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
 
 # freeze the convolutional base
 #base_model.trainable = False
-trainable = 3
-for layer in base_model.layers[:-trainable]:
-    layer.trainable = False
-for layer in base_model.layers[-trainable:]:
-    layer.trainable = True
+trainable = 0
+
+if trainable == 0:
+    for layer in base_model.layers:
+        layer.trainable = False
+else:
+    for layer in base_model.layers[:-trainable]:
+        layer.trainable = False
+    for layer in base_model.layers[-trainable:]:
+        layer.trainable = True
 
 print(base_model.summary())
 
@@ -122,13 +127,13 @@ model.compile(optimizer='SGD',
               loss=tf.keras.losses.CategoricalCrossentropy(),
               metrics=['accuracy'])
 
-number_of_epochs = 10
+number_of_epochs = 5
 
 # callbacks to implement early stopping and saving the model
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
 mc = ModelCheckpoint(monitor='val_accuracy', mode='max',
                      verbose=1, save_freq='epoch',
-                     filepath='kaggle-single-frame.{epoch:02d}-{val_accuracy:.2f}.h5')
+                     filepath='kaggle-single-frame-of.{epoch:02d}-{val_accuracy:.2f}.h5')
 
 print("fitting the model...")
 history = model.fit(train_ds,
@@ -149,4 +154,4 @@ plt.legend(loc='lower right')
 plt.ylabel('Accuracy')
 plt.ylim([min(plt.ylim()),1])
 plt.title('Training and Validation Accuracy')
-plt.savefig("accuracy.pdf", format="pdf")
+plt.savefig("accuracy-of.pdf", format="pdf")
