@@ -114,8 +114,6 @@ else:
     for layer in base_model.layers[-trainable:]:
         layer.trainable = True
 
-print(base_model.summary())
-
 # Build the model
 inputs = tf.keras.Input(shape=IMG_SHAPE)
 x = inputs
@@ -134,7 +132,7 @@ model.compile(optimizer='SGD',
               loss=tf.keras.losses.CategoricalCrossentropy(),
               metrics=['accuracy'])
 
-number_of_epochs = 5
+number_of_epochs = 10
 
 # callbacks to implement early stopping and saving the model
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
@@ -154,6 +152,7 @@ train_acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
 
 plt.figure(figsize=(8, 8))
+plt.grid(True, axis="y")
 plt.subplot(2, 1, 1)
 plt.plot(train_acc, label='Training Accuracy')
 plt.plot(val_acc, label='Validation Accuracy')
@@ -165,4 +164,7 @@ plt.savefig("accuracy-of.pdf", format="pdf")
 
 
 test_loss, test_accuracy = model.evaluate(test_ds)
-print('Test loss:', test_loss, 'accuracy :', test_accuracy)
+result_str = 'Test loss: {} accuracy: {}\n'.format(test_loss, test_accuracy)
+print(result_str)
+with open("mitc-of-test.txt", "w") as f:
+    f.write(result_str)

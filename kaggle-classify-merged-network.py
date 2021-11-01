@@ -24,10 +24,7 @@ rgb_dir = '/data/handwash/kaggle-dataset-6classes-frames'
 of_dir = '/data/handwash/kaggle-dataset-6classes-of'
 
 # Define parameters for the dataset loader.
-# Adjust batch size according to the memory volume of your GPU;
-# 16 works well on most GPU
-# 256 works well on NVIDIA RTX 3090 with 24 GB VRAM
-batch_size = 16
+batch_size = 128
 img_width = 320
 img_height = 240
 IMG_SIZE = (img_height, img_width)
@@ -90,9 +87,7 @@ model.compile(optimizer='SGD',
               loss=tf.keras.losses.CategoricalCrossentropy(),
               metrics=['accuracy'])
 
-model.save("test.h5")
-
-number_of_epochs = 5
+number_of_epochs = 10
 
 # callbacks to implement early stopping and saving the model
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
@@ -122,6 +117,18 @@ val_ds = merged_dataset_from_directories(
   shuffle=True,
   label_mode='categorical',
   batch_size=batch_size)
+
+val_ds = merged_dataset_from_directories(
+  test_rgb_dir,
+  test_of_dir,
+  validation_split=0.2,
+  subset="validation",
+  seed=123,
+  image_size=IMG_SIZE,
+  shuffle=True,
+  label_mode='categorical',
+  batch_size=batch_size)
+
 
 # check the names of the classes
 class_names = train_ds.class_names

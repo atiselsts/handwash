@@ -27,10 +27,7 @@ test_of_dir = '/data/handwash/RSU_MITC_preprocessed/frames/test'
 test_rgb_dir = '/data/handwash/RSU_MITC_preprocessed/of/test'
 
 # Define parameters for the dataset loader.
-# Adjust batch size according to the memory volume of your GPU;
-# 16 works well on most GPU
-# 256 works well on NVIDIA RTX 3090 with 24 GB VRAM
-batch_size = 256
+batch_size = 128
 img_width = 320
 img_height = 240
 IMG_SIZE = (img_height, img_width)
@@ -93,9 +90,7 @@ model.compile(optimizer='SGD',
               loss=tf.keras.losses.CategoricalCrossentropy(),
               metrics=['accuracy'])
 
-model.save("test.h5")
-
-number_of_epochs = 5
+number_of_epochs = 10
 
 # callbacks to implement early stopping and saving the model
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
@@ -120,6 +115,15 @@ val_ds = merged_dataset_from_directories(
   of_dir,
   validation_split=0.2,
   subset="validation",
+  seed=123,
+  image_size=IMG_SIZE,
+  shuffle=True,
+  label_mode='categorical',
+  batch_size=batch_size)
+
+test_ds = merged_dataset_from_directories(
+  test_rgb_dir,
+  test_of_dir,
   seed=123,
   image_size=IMG_SIZE,
   shuffle=True,
@@ -157,6 +161,7 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
 val_ds = val_ds.prefetch(buffer_size=AUTOTUNE)
+test_ds = test_ds.prefetch(buffer_size=AUTOTUNE)
 
 
 print("fitting the model...")
@@ -171,6 +176,7 @@ train_acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
 
 plt.figure(figsize=(8, 8))
+plt.grid(True, axis="y")
 plt.subplot(2, 1, 1)
 plt.plot(train_acc, label='Training Accuracy')
 plt.plot(val_acc, label='Validation Accuracy')
@@ -179,3 +185,10 @@ plt.ylabel('Accuracy')
 plt.ylim([min(plt.ylim()),1])
 plt.title('Training and Validation Accuracy')
 plt.savefig("accuracy-mitc-merged-network.pdf", format="pdf")
+
+
+test_loss, test_accuracy = model.evaluate(test_ds)
+result_str = 'Test loss: {} accuracy: {}\n'.format(test_loss, test_accuracy)
+print(result_str)
+with open("mitc-merged-network-test.txt", "w") as f:
+    f.write(result_str)

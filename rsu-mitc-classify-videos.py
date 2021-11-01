@@ -91,7 +91,7 @@ weights = avg / images_by_labels
 # create dictionary with weights as required for keras fit() function
 weights_dict = {}
 for item in range(len(weights)):
-    weights_dict[int(class_names[item])] = weights[item]
+    weights_dict[int(CLASS_NAMES[item])] = weights[item]
 print("weights_dict=", weights_dict)
 
 
@@ -156,6 +156,7 @@ train_acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
 
 plt.figure(figsize=(8, 8))
+plt.grid(True, axis="y")
 plt.subplot(2, 1, 1)
 plt.plot(train_acc, label='Training Accuracy')
 plt.plot(val_acc, label='Validation Accuracy')
@@ -167,4 +168,7 @@ plt.savefig("accuracy-mitc-time-distributed.pdf", format="pdf")
 
 
 test_loss, test_accuracy = model.evaluate(test_ds)
-print('Test loss:', test_loss, 'accuracy :', test_accuracy)
+result_str = 'Test loss: {} accuracy: {}\n'.format(test_loss, test_accuracy)
+print(result_str)
+with open("mitc-time-distributed-test.txt", "w") as f:
+    f.write(result_str)

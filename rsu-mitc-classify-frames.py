@@ -46,6 +46,13 @@ val_ds = tf.keras.preprocessing.image_dataset_from_directory(
   label_mode='categorical',
   batch_size=batch_size)
 
+test_ds = tf.keras.preprocessing.image_dataset_from_directory(
+  test_data_dir,
+  seed=123,
+  image_size=IMG_SIZE,
+  label_mode='categorical',
+  batch_size=batch_size)
+
 # check the names of the classes
 class_names = train_ds.class_names
 print(class_names)
@@ -76,6 +83,7 @@ print("weights_dict=", weights_dict)
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
+test_ds = test_ds.prefetch(buffer_size=AUTOTUNE)
 val_ds = val_ds.prefetch(buffer_size=AUTOTUNE)
 
 
@@ -89,7 +97,6 @@ data_augmentation = tf.keras.Sequential([
 
 # rescale pixel values
 preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
-#rescale = tf.keras.layers.experimental.preprocessing.Rescaling(1./127.5, offset= -1)
 
 
 base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
@@ -106,8 +113,6 @@ else:
         layer.trainable = False
     for layer in base_model.layers[-trainable:]:
         layer.trainable = True
-
-print(base_model.summary())
 
 # Build the model
 inputs = tf.keras.Input(shape=IMG_SHAPE)
@@ -126,7 +131,7 @@ model.compile(optimizer='SGD',
               loss=tf.keras.losses.CategoricalCrossentropy(),
               metrics=['accuracy'])
 
-number_of_epochs = 5
+number_of_epochs = 10
 
 # callbacks to implement early stopping and saving the model
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
@@ -146,6 +151,7 @@ train_acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
 
 plt.figure(figsize=(8, 8))
+plt.grid(True, axis="y")
 plt.subplot(2, 1, 1)
 plt.plot(train_acc, label='Training Accuracy')
 plt.plot(val_acc, label='Validation Accuracy')
@@ -154,3 +160,10 @@ plt.ylabel('Accuracy')
 plt.ylim([min(plt.ylim()),1])
 plt.title('Training and Validation Accuracy')
 plt.savefig("accuracy-mitc-single-frame.pdf", format="pdf")
+
+
+test_loss, test_accuracy = model.evaluate(test_ds)
+result_str = 'Test loss: {} accuracy: {}\n'.format(test_loss, test_accuracy)
+print(result_str)
+with open("mitc-single-frame-test.txt", "w") as f:
+    f.write(result_str)

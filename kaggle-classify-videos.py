@@ -76,7 +76,7 @@ weights = avg / images_by_labels
 # create dictionary with weights as required for keras fit() function
 weights_dict = {}
 for item in range(len(weights)):
-    weights_dict[int(class_names[item])] = weights[item]
+    weights_dict[int(CLASS_NAMES[item])] = weights[item]
 print("weights_dict=", weights_dict)
 
 
