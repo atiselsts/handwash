@@ -45,6 +45,14 @@ val_ds = tf.keras.preprocessing.image_dataset_from_directory(
   label_mode='categorical',
   batch_size=batch_size)
 
+test_ds = tf.keras.preprocessing.image_dataset_from_directory(
+  test_data_dir,
+  seed=123,
+  image_size=IMG_SIZE,
+  label_mode='categorical',
+  batch_size=batch_size)
+
+
 # check the names of the classes
 class_names = train_ds.class_names
 print(class_names)
@@ -76,6 +84,7 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
 val_ds = val_ds.prefetch(buffer_size=AUTOTUNE)
+test_ds = test_ds.prefetch(buffer_size=AUTOTUNE)
 
 
 # data augmentation
@@ -153,3 +162,7 @@ plt.ylabel('Accuracy')
 plt.ylim([min(plt.ylim()),1])
 plt.title('Training and Validation Accuracy')
 plt.savefig("accuracy-of.pdf", format="pdf")
+
+
+test_loss, test_accuracy = model.evaluate(test_ds)
+print('Test loss:', test_loss, 'accuracy :', test_accuracy)

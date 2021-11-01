@@ -35,7 +35,8 @@ N_CLASSES = len(CLASS_NAMES)
 # how many frames to concatenate as input to the network
 N_FRAMES = 5
 
-GLOB_PATTERN= os.path.join(data_dir, '{classname}/*.mp4')
+TRAINVAL_GLOB_PATTERN= os.path.join(data_dir, '{classname}/*.mp4')
+TEST_GLOB_PATTERN= os.path.join(test_data_dir, '{classname}/*.mp4')
 
 # for data augmentation
 data_aug = tf.keras.preprocessing.image.ImageDataGenerator(
@@ -44,10 +45,10 @@ data_aug = tf.keras.preprocessing.image.ImageDataGenerator(
 
 train_ds = VideoFrameGenerator(
     classes=CLASS_NAMES,
-    glob_pattern=GLOB_PATTERN,
+    glob_pattern=TRAINVAL_GLOB_PATTERN,
     nb_frames=N_FRAMES,
     split_val=0.2,
-    shuffle=False,
+    shuffle=True,
     batch_size=BATCH_SIZE,
     target_shape=(img_width, img_height),
     nb_channel=N_CHANNELS,
@@ -57,6 +58,18 @@ train_ds = VideoFrameGenerator(
     use_frame_cache=False)
 
 val_ds = train_ds.get_validation_generator()
+
+test_ds = VideoFrameGenerator(
+    classes=CLASS_NAMES,
+    glob_pattern=TEST_GLOB_PATTERN,
+    nb_frames=N_FRAMES,
+    shuffle=False,
+    batch_size=BATCH_SIZE,
+    target_shape=(img_width, img_height),
+    nb_channel=N_CHANNELS,
+    rescale=1,
+    frame_step = FPS // N_FRAMES,
+    use_frame_cache=False)
 
 base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                include_top=False,
@@ -124,3 +137,7 @@ plt.ylabel('Accuracy')
 plt.ylim([min(plt.ylim()),1])
 plt.title('Training and Validation Accuracy')
 plt.savefig("accuracy-mitc-time-distributed.pdf", format="pdf")
+
+
+test_loss, test_accuracy = model.evaluate(test_ds)
+print('Test loss:', test_loss, 'accuracy :', test_accuracy)
