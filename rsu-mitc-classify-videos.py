@@ -72,18 +72,14 @@ test_ds = VideoFrameGenerator(
     use_frame_cache=False)
 
 
-# check the names of the classes
-class_names = train_ds.class_names
-print(class_names)
-
 # As the dataset is imbalanced, is is necessary to get weights for each class
 # get the number of trainval images for each class
 images_by_labels = []
-for i in range(len(class_names)):
+for i in range(N_CLASSES):
     for subdir, dirs, files in os.walk(os.path.join(data_dir,str(i))):
         n_of_files = 0
         for image_file in files:
-            if image_file.endswith("jpg"):
+            if image_file.endswith("mp4"):
                 n_of_files += 1
         images_by_labels.append(n_of_files)
 
