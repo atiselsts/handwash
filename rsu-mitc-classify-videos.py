@@ -16,7 +16,8 @@ if 1:
         tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # make sure to provide correct paths to the folders on your machine
-data_dir = '/data/handwash/kaggle-dataset-6classes-videos/'
+data_dir = '/data/handwash/RSU_MITC_preprocessed/videos/trainval'
+test_data_dir = '/data/handwash/RSU_MITC_preprocessed/videos/test'
 
 img_width = 320
 img_height = 240
@@ -100,7 +101,7 @@ number_of_epochs = 10
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
 mc = ModelCheckpoint(monitor='val_accuracy', mode='max',
                      verbose=1, save_freq='epoch',
-                     filepath='kaggle-time-distributed.{epoch:02d}-{val_accuracy:.2f}.h5')
+                     filepath='mitc-time-distributed.{epoch:02d}-{val_accuracy:.2f}.h5')
 
 print("fitting the model...")
 history = model.fit(train_ds,
@@ -122,4 +123,4 @@ plt.legend(loc='lower right')
 plt.ylabel('Accuracy')
 plt.ylim([min(plt.ylim()),1])
 plt.title('Training and Validation Accuracy')
-plt.savefig("accuracy-kaggle-time-distributed.pdf", format="pdf")
+plt.savefig("accuracy-mitc-time-distributed.pdf", format="pdf")

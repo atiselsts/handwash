@@ -14,7 +14,9 @@ if len(physical_devices):
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # make sure to provide correct paths to the folders on your machine
-data_dir = '/data/handwash/kaggle-dataset-6classes-of/'
+data_dir = '/data/handwash/RSU_MITC_preprocessed/frames/trainval'
+test_data_dir = '/data/handwash/RSU_MITC_preprocessed/frames/test'
+
 
 # Define parameters for the dataset loader.
 # Adjust batch size according to the memory volume of your GPU;
@@ -87,6 +89,7 @@ data_augmentation = tf.keras.Sequential([
 
 # rescale pixel values
 preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
+#rescale = tf.keras.layers.experimental.preprocessing.Rescaling(1./127.5, offset= -1)
 
 
 base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
@@ -113,7 +116,6 @@ x = data_augmentation(inputs)
 x = preprocess_input(x)
 x = base_model(x, training=False)
 x = tf.keras.layers.Flatten()(x)
-#x = tf.keras.layers.BatchNormalization()(x)
 outputs = tf.keras.layers.Dense(len(class_names), activation='softmax')(x)
 model = tf.keras.Model(inputs, outputs)
 
@@ -130,7 +132,7 @@ number_of_epochs = 5
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
 mc = ModelCheckpoint(monitor='val_accuracy', mode='max',
                      verbose=1, save_freq='epoch',
-                     filepath='kaggle-single-frame-of.{epoch:02d}-{val_accuracy:.2f}.h5')
+                     filepath='mitc-single-frame.{epoch:02d}-{val_accuracy:.2f}.h5')
 
 print("fitting the model...")
 history = model.fit(train_ds,
@@ -151,4 +153,4 @@ plt.legend(loc='lower right')
 plt.ylabel('Accuracy')
 plt.ylim([min(plt.ylim()),1])
 plt.title('Training and Validation Accuracy')
-plt.savefig("accuracy-kaggle-of.pdf", format="pdf")
+plt.savefig("accuracy-mitc-single-frame.pdf", format="pdf")

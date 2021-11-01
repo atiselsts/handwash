@@ -14,7 +14,8 @@ if len(physical_devices):
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # make sure to provide correct paths to the folders on your machine
-data_dir = '/data/handwash/kaggle-dataset-6classes-of/'
+data_dir = '/data/handwash/RSU_MITC_preprocessed/of/trainval'
+test_data_dir = '/data/handwash/RSU_MITC_preprocessed/of/test'
 
 # Define parameters for the dataset loader.
 # Adjust batch size according to the memory volume of your GPU;
@@ -151,4 +152,4 @@ plt.legend(loc='lower right')
 plt.ylabel('Accuracy')
 plt.ylim([min(plt.ylim()),1])
 plt.title('Training and Validation Accuracy')
-plt.savefig("accuracy-kaggle-of.pdf", format="pdf")
+plt.savefig("accuracy-of.pdf", format="pdf")

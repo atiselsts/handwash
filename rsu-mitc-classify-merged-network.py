@@ -20,8 +20,11 @@ if len(physical_devices):
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # make sure to provide correct paths to the folders on your machine
-rgb_dir = '/data/handwash/kaggle-dataset-6classes-frames'
-of_dir = '/data/handwash/kaggle-dataset-6classes-of'
+rgb_dir = '/data/handwash/RSU_MITC_preprocessed/frames/trainval'
+of_dir = '/data/handwash/RSU_MITC_preprocessed/of/trainval'
+
+test_of_dir = '/data/handwash/RSU_MITC_preprocessed/frames/test'
+test_rgb_dir = '/data/handwash/RSU_MITC_preprocessed/of/test'
 
 # Define parameters for the dataset loader.
 # Adjust batch size according to the memory volume of your GPU;
@@ -98,7 +101,7 @@ number_of_epochs = 5
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
 mc = ModelCheckpoint(monitor='val_accuracy', mode='max',
                      verbose=1, save_freq='epoch',
-                     filepath='kaggle-single-frame-merged-of.{epoch:02d}-{val_accuracy:.2f}.h5')
+                     filepath='mitc-single-frame-merged-of.{epoch:02d}-{val_accuracy:.2f}.h5')
 
 
 train_ds = merged_dataset_from_directories(
@@ -175,4 +178,4 @@ plt.legend(loc='lower right')
 plt.ylabel('Accuracy')
 plt.ylim([min(plt.ylim()),1])
 plt.title('Training and Validation Accuracy')
-plt.savefig("accuracy-kaggle-merged-network.pdf", format="pdf")
+plt.savefig("accuracy-mitc-merged-network.pdf", format="pdf")

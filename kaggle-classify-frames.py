@@ -14,7 +14,7 @@ if len(physical_devices):
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # make sure to provide correct paths to the folders on your machine
-data_dir = '../kaggle-dataset-6classes-frames/'
+data_dir = '/data/handwash/kaggle-dataset-6classes-frames/'
 
 # Define parameters for the dataset loader.
 # Adjust batch size according to the memory volume of your GPU;
@@ -87,7 +87,6 @@ data_augmentation = tf.keras.Sequential([
 
 # rescale pixel values
 preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
-#rescale = tf.keras.layers.experimental.preprocessing.Rescaling(1./127.5, offset= -1)
 
 
 base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
@@ -95,9 +94,7 @@ base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                weights='imagenet')
 
 # freeze the convolutional base
-#base_model.trainable = False
 trainable = 0
-
 if trainable == 0:
     for layer in base_model.layers:
         layer.trainable = False
@@ -116,7 +113,6 @@ x = data_augmentation(inputs)
 x = preprocess_input(x)
 x = base_model(x, training=False)
 x = tf.keras.layers.Flatten()(x)
-#x = tf.keras.layers.BatchNormalization()(x)
 outputs = tf.keras.layers.Dense(len(class_names), activation='softmax')(x)
 model = tf.keras.Model(inputs, outputs)
 
@@ -154,4 +150,4 @@ plt.legend(loc='lower right')
 plt.ylabel('Accuracy')
 plt.ylim([min(plt.ylim()),1])
 plt.title('Training and Validation Accuracy')
-plt.savefig("accuracy-single-frame.pdf", format="pdf")
+plt.savefig("accuracy-kaggle-single-frame.pdf", format="pdf")
