@@ -57,6 +57,33 @@ train_ds = VideoFrameGenerator(
 
 val_ds = train_ds.get_validation_generator()
 
+# check the names of the classes
+class_names = train_ds.class_names
+print(class_names)
+
+# As the dataset is imbalanced, is is necessary to get weights for each class
+# get the number of trainval images for each class
+images_by_labels = []
+for i in range(len(class_names)):
+    for subdir, dirs, files in os.walk(os.path.join(data_dir,str(i))):
+        n_of_files = 0
+        for image_file in files:
+            if image_file.endswith("jpg"):
+                n_of_files += 1
+        images_by_labels.append(n_of_files)
+
+# calculate weights
+images_by_labels = np.array(images_by_labels)
+avg = np.average(images_by_labels)
+weights = avg / images_by_labels
+
+# create dictionary with weights as required for keras fit() function
+weights_dict = {}
+for item in range(len(weights)):
+    weights_dict[int(class_names[item])] = weights[item]
+print("weights_dict=", weights_dict)
+
+
 base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                include_top=False,
                                                pooling='avg',
@@ -64,12 +91,15 @@ base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
 print("base model constructed...")
 
 # freeze the convolutional base
-base_model.trainable = False
 trainable = 0
-for layer in base_model.layers[:-trainable]:
-    layer.trainable = False
-for layer in base_model.layers[-trainable:]:
-    layer.trainable = True
+if trainable == 0:
+    for layer in base_model.layers:
+        layer.trainable = False
+else:
+    for layer in base_model.layers[:-trainable]:
+        layer.trainable = False
+    for layer in base_model.layers[-trainable:]:
+        layer.trainable = True
 
 def return_end_model():
     INPUT_SHAPE = (N_FRAMES,) + IMG_SHAPE
@@ -106,7 +136,7 @@ print("fitting the model...")
 history = model.fit(train_ds,
                     epochs=number_of_epochs,
                     validation_data=val_ds,
-#                    class_weight=weights_dict,
+                    class_weight=weights_dict,
                     callbacks=[es, mc]
                     )
 
