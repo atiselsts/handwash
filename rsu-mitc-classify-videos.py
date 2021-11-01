@@ -25,7 +25,7 @@ IMG_SIZE = (img_height, img_width)
 N_CHANNELS = 3
 IMG_SHAPE = IMG_SIZE + (N_CHANNELS,)
 
-BATCH_SIZE = 4
+BATCH_SIZE = 64
 
 FPS = 30
 

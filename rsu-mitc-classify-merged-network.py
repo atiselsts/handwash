@@ -30,7 +30,7 @@ test_rgb_dir = '/data/handwash/RSU_MITC_preprocessed/of/test'
 # Adjust batch size according to the memory volume of your GPU;
 # 16 works well on most GPU
 # 256 works well on NVIDIA RTX 3090 with 24 GB VRAM
-batch_size = 16
+batch_size = 256
 img_width = 320
 img_height = 240
 IMG_SIZE = (img_height, img_width)

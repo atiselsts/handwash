@@ -21,7 +21,7 @@ test_data_dir = '/data/handwash/RSU_MITC_preprocessed/of/test'
 # Adjust batch size according to the memory volume of your GPU;
 # 16 works well on most GPU
 # 256 works well on NVIDIA RTX 3090 with 24 GB VRAM
-batch_size = 16
+batch_size = 256
 img_width = 320
 img_height = 240
 IMG_SIZE = (img_height, img_width)
@@ -140,7 +140,7 @@ number_of_epochs = 5
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
 mc = ModelCheckpoint(monitor='val_accuracy', mode='max',
                      verbose=1, save_freq='epoch',
-                     filepath='kaggle-single-frame-of.{epoch:02d}-{val_accuracy:.2f}.h5')
+                     filepath='mitc-single-frame-of.{epoch:02d}-{val_accuracy:.2f}.h5')
 
 print("fitting the model...")
 history = model.fit(train_ds,
