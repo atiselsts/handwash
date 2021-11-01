@@ -60,7 +60,7 @@ val_ds = train_ds.get_validation_generator()
 
 base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                include_top=False,
-                                               pooling='max',
+                                               pooling='avg',
                                                weights='imagenet')
 print("base model constructed...")
 
