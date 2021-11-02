@@ -11,9 +11,6 @@ from tensorflow.python.keras.preprocessing import dataset_utils
 from tensorflow.python.keras.preprocessing import image as keras_image_ops
 from tensorflow.python.ops import image_ops
 from tensorflow.python.ops import io_ops
-from tensorflow.python.util.tf_export import keras_export
-
-#from tensorflow.keras.preprocessing import load_image
 
 ALLOWLIST_FORMATS = ('.bmp', '.gif', '.jpeg', '.jpg', '.png')
 
@@ -184,11 +181,14 @@ def merged_dataset_from_directories(rgb_directory,
       seed=seed,
       follow_links=follow_links)
 
-  dir_of = os.path.basename(of_directory.rstrip("/"))
-  dir_rgb = os.path.basename(rgb_directory.rstrip("/"))
+  dir_of = os.path.abspath(of_directory.rstrip("/"))
+  dir_rgb = os.path.abspath(rgb_directory.rstrip("/"))
+  #print("dir_of=", dir_of)
+  #print("dir_rgb=", dir_rgb)
   rgb_image_paths = []
   for of_path in of_image_paths:
       rgb_path = of_path.replace(dir_of, dir_rgb)
+      # print("add path", rgb_path, "created from", of_path)
       if not os.access(rgb_path, os.R_OK):
           raise TypeError(f'no such file: {rgb_path}')
       rgb_image_paths.append(rgb_path)
