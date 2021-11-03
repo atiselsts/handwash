@@ -120,11 +120,12 @@ class VideoFrameGenerator(Sequence):
         self.target_shape = target_shape
         self.nb_channel = nb_channel
         self.transformation = transformation
-        self.use_frame_cache = use_frame_cache
+        #self.use_frame_cache = use_frame_cache
         self.frame_step = frame_step
 
         self._random_trans = []
-        self.__frame_cache = {}
+        self.frame_cache = None
+        self.frame_cache_video = None
         self.files = []
         self.validation_files = []
         self.test_files = []
@@ -342,10 +343,10 @@ class VideoFrameGenerator(Sequence):
                     self.transformation.get_random_transform(self.target_shape)
                 )
 
-        self.__frame_cache = {} # clear the old frame cache
+        #self.frame_cache = None # clear the old frame cache
 
         if self.shuffle:
-            print("\non_epoch_end: shuffle\n")
+            #print("\non_epoch_end: shuffle\n")
             np.random.shuffle(self.file_indexes)
             self._items = self.create_items_list(self.file_indexes)
 
@@ -385,8 +386,8 @@ class VideoFrameGenerator(Sequence):
             col = classes.index(classname)
             label[col] = 1.
 
-            if video not in self.__frame_cache:
-                self.__frame_cache = {} # clear the old frame cache
+            if video != self.frame_cache_video:
+#                self.__frame_cache = {} # clear the old frame cache
 
                 frames = self._get_frames(video)
                 if frames is None:
@@ -400,10 +401,11 @@ class VideoFrameGenerator(Sequence):
                         frame, transformation) for frame in frames]
 
                 # add to cache
-                self.__frame_cache[video] = frames
+                self.frame_cache = frames
+                self.frame_cache_video = video
 
             else:
-                frames = self.__frame_cache[video]
+                frames = self.frame_cache
 
             # append the selected frames
             selected_frames = []
