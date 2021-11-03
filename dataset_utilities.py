@@ -1,5 +1,7 @@
 import os
 import tensorflow as tf
+import numpy as np
+
 import classify_dataset
 
 def get_datasets(data_dir, test_data_dir, batch_size=None):
@@ -7,7 +9,7 @@ def get_datasets(data_dir, test_data_dir, batch_size=None):
         batch_size = classify_dataset.batch_size
 
     IMG_SIZE = classify_dataset.IMG_SIZE
-    
+
     train_ds = tf.keras.preprocessing.image_dataset_from_directory(
         data_dir,
         validation_split=0.2,
@@ -33,20 +35,26 @@ def get_datasets(data_dir, test_data_dir, batch_size=None):
         label_mode='categorical',
         batch_size=batch_size)
 
-    # check the names of the classes
-    class_names = train_ds.class_names
-    print(class_names)
+    weights_dict = get_weights_dict(data_dir, train_ds.class_names)
 
+    # to improve performance, use buffered prefetching to load images
+    AUTOTUNE = tf.data.experimental.AUTOTUNE
+
+    train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
+    val_ds = val_ds.prefetch(buffer_size=AUTOTUNE)
+    test_ds = test_ds.prefetch(buffer_size=AUTOTUNE)
+
+    return train_ds, val_ds, test_ds, weights_dict
+
+
+def get_weights_dict(data_dir, class_names):
     # As the dataset is imbalanced, is is necessary to get weights for each class
     # get the number of trainval images for each class
     images_by_labels = []
     for i in range(len(class_names)):
-        for subdir, dirs, files in os.walk(os.path.join(data_dir,str(i))):
-            n_of_files = 0
-            for image_file in files:
-                if image_file.endswith(".jpg") or image_file.endswith(".mp4"):
-                    n_of_files += 1
-                images_by_labels.append(n_of_files)
+        for subdir, dirs, files in os.walk(os.path.join(data_dir, str(i))):
+            n_of_files = sum([f.endswith(".jpg") or f.endswith(".mp4") for f in files])
+            images_by_labels.append(n_of_files)
 
     # calculate weights
     images_by_labels = np.array(images_by_labels)
@@ -59,11 +67,4 @@ def get_datasets(data_dir, test_data_dir, batch_size=None):
         weights_dict[int(class_names[item])] = weights[item]
     print("weights_dict=", weights_dict)
 
-    # to improve performance, use buffered prefetching to load images
-    AUTOTUNE = tf.data.experimental.AUTOTUNE
-
-    train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
-    val_ds = val_ds.prefetch(buffer_size=AUTOTUNE)
-    test_ds = test_ds.prefetch(buffer_size=AUTOTUNE)
-    
-    return train_ds, val_ds, test_ds, weights_dict
+    return weights_dict

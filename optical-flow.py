@@ -4,8 +4,8 @@ import os
 import cv2 as cv
 import numpy as np
 
-input_dir = "../kaggle-dataset-6classes"
-output_dir = "../kaggle-dataset-6classes-of"
+input_dir = "../kaggle-dataset-6classes/videos/test"
+output_dir = "../kaggle-dataset-6classes/of/test"
 
 N_CLASSES = 7
 classes = [str(i) for i in range(N_CLASSES)]
