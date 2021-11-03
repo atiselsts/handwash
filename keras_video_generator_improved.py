@@ -68,6 +68,8 @@ class VideoFrameGenerator(Sequence):
             *args,
             **kwargs):
 
+        print("frame_step=", frame_step)
+
         # deprecation
         if 'split' in kwargs:
             log.warn("Warning, `split` argument is replaced by `split_val`, "
@@ -209,7 +211,7 @@ class VideoFrameGenerator(Sequence):
         if self.shuffle:
             np.random.shuffle(self.file_indexes)
         self._items = self.create_items_list(self.file_indexes)
-   
+
         #print("num_frames=", self.num_frames, "num_sequences=", self.num_sequences)
         #for i in self._items:
         #     print(i)
@@ -264,7 +266,7 @@ class VideoFrameGenerator(Sequence):
         # keep the result
         self._framecounters[file_name] = int(total_frames)
 
-        chunk_offset = (self.frame_step - 1) * self.nb_frames
+        chunk_offset = self.frame_step * (self.nb_frames - 1)
         start_frame_num = 0
         end_frame_num = chunk_offset
         self._items_per_file[file_index] = []
@@ -316,6 +318,7 @@ class VideoFrameGenerator(Sequence):
             shuffle=self.shuffle,
             rescale=self.rescale,
             glob_pattern=self.glob_pattern,
+            frame_step=self.frame_step,
             use_headers=self.use_video_header,
             _validation_data=self.validation_files)
 
@@ -329,6 +332,7 @@ class VideoFrameGenerator(Sequence):
             batch_size=self.batch_size,
             shuffle=self.shuffle,
             rescale=self.rescale,
+            frame_step=self.frame_step,
             glob_pattern=self.glob_pattern,
             use_headers=self.use_video_header,
             _test_data=self.test_files)
@@ -387,8 +391,6 @@ class VideoFrameGenerator(Sequence):
             label[col] = 1.
 
             if video != self.frame_cache_video:
-#                self.__frame_cache = {} # clear the old frame cache
-
                 frames = self._get_frames(video)
                 if frames is None:
                     # failed to get frames
@@ -413,6 +415,7 @@ class VideoFrameGenerator(Sequence):
             while frame <= end_frame:
                 selected_frames.append(frames[frame])
                 frame += self.frame_step
+            #print("get item, frames=", start_frame, end_frame, len(selected_frames))
 
             # add the sequence in batch
             images.append(selected_frames)

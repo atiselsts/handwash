@@ -56,6 +56,6 @@ test_ds = VideoFrameGenerator(
 
 weights_dict = get_weights_dict(data_dir, CLASS_NAMES)
 
-model = get_time_distributed_model()
+model = get_time_distributed_model(N_FRAMES)
 
 evaluate("kaggle-videos", train_ds, val_ds, test_ds, weights_dict, model=model)

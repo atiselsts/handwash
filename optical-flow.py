@@ -4,13 +4,17 @@ import os
 import cv2 as cv
 import numpy as np
 
-input_dir = "../kaggle-dataset-6classes/videos/test"
-output_dir = "../kaggle-dataset-6classes/of/test"
+#input_dir = "../kaggle-dataset-6classes/videos/test"
+#output_dir = "../kaggle-dataset-6classes/of/test"
+
+input_dir = "/data/handwash/RSU_MITC_preprocessed/videos/test"
+output_dir = "/data/handwash/RSU_MITC_preprocessed/of/test"
+
 
 N_CLASSES = 7
 classes = [str(i) for i in range(N_CLASSES)]
 
-FPS = 30
+FPS = 16 if "MITC" in input_dir else 30
 
 # what step to use for movements?
 frame_step = FPS // 3

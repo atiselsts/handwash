@@ -56,7 +56,7 @@ def get_default_model(num_trainable_layers=0):
     # Build the model
     inputs = tf.keras.Input(shape=IMG_SHAPE)
     x = inputs
-    x = data_augmentation(inputs)
+    x = data_augmentation(x)
     x = preprocess_input(x)
     x = base_model(x, training=False)
     x = tf.keras.layers.Flatten()(x)
@@ -67,7 +67,7 @@ def get_default_model(num_trainable_layers=0):
     return model
 
 
-def get_time_distributed_model(num_trainable_layers=0):
+def get_time_distributed_model(num_frames, num_trainable_layers=0):
     base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                    include_top=False,
                                                    pooling='avg',
@@ -76,9 +76,11 @@ def get_time_distributed_model(num_trainable_layers=0):
     freeze_model(base_model, num_trainable_layers)
 
     # Build the model
-    inputs = tf.keras.Input(shape=IMG_SHAPE)
+    INPUT_SHAPE = (num_frames,) + IMG_SHAPE
+    inputs = tf.keras.Input(shape=INPUT_SHAPE)
     x = inputs
-    x = data_augmentation(inputs)
+    # data augmentation cannot be done here: it's instead done in the dataset generator code
+    #x = data_augmentation(x)
     x = preprocess_input(x)
     x = tf.keras.layers.TimeDistributed(base_model)(x)
     x = tf.keras.layers.GRU(256)(x)
