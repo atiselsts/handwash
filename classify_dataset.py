@@ -67,6 +67,29 @@ def get_default_model(num_trainable_layers=0):
     return model
 
 
+def get_time_distributed_model(num_trainable_layers=0):
+    base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
+                                                   include_top=False,
+                                                   pooling='avg',
+                                                   weights='imagenet')
+
+    freeze_model(base_model, num_trainable_layers)
+
+    # Build the model
+    inputs = tf.keras.Input(shape=IMG_SHAPE)
+    x = inputs
+    x = data_augmentation(inputs)
+    x = preprocess_input(x)
+    x = tf.keras.layers.TimeDistributed(base_model)(x)
+    x = tf.keras.layers.GRU(256)(x)
+    outputs = tf.keras.layers.Dense(N_CLASSES, activation='softmax')(x)
+    model = tf.keras.Model(inputs, outputs)
+    print(model.summary())
+
+    return model
+
+
+
 def get_merged_model(num_trainable_layers=0):
     base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                    include_top=False,
