@@ -5,11 +5,14 @@
 # https://github.com/Realtime-Action-Recognition/Realtime-Action-Recognition/blob/master/three_stream_model.py
 #
 
-from classify_dataset import evaluate, get_merged_model, IMG_SHAPE, CLASS_NAMES, batch_size
+from classify_dataset import evaluate, get_merged_model, IMG_SIZE, N_CLASSES, batch_size
 from dataset_utilities import get_weights_dict
 from generator_rgb_with_of import merged_dataset_from_directories
 
 import tensorflow as tf
+
+# reduce the batch size
+batch_size //= 2
 
 # make sure to provide correct paths to the folders on your machine
 rgb_dir = '/data/handwash/RSU_MITC_preprocessed/frames/trainval'

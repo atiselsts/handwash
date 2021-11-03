@@ -11,11 +11,12 @@ if len(physical_devices):
 # Adjust batch size according to the memory volume of your GPU;
 # 16 works well on most GPU
 # 256 works well on NVIDIA RTX 3090 with 24 GB VRAM
-batch_size = 16
+batch_size = 256
 img_width = 320
 img_height = 240
 IMG_SIZE = (img_height, img_width)
-IMG_SHAPE = IMG_SIZE + (3,)
+N_CHANNELS = 3
+IMG_SHAPE = IMG_SIZE + (N_CHANNELS,)
 
 N_CLASSES = 7
 

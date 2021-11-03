@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from classify_dataset import evaluate, img_width, img_height, N_CLASSES
+import os
+from classify_dataset import evaluate, img_width, img_height, N_CLASSES, N_CHANNELS
 from dataset_utilities import get_weights_dict
 from keras_video import VideoFrameGenerator
 import tensorflow as tf
