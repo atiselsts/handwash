@@ -5,6 +5,7 @@ Generator for combined [rgb, of] input tensors.
 import os
 import numpy as np
 
+import tensorflow as tf
 from tensorflow.python.data.ops import dataset_ops
 from tensorflow.python.keras.layers.preprocessing import image_preprocessing
 from tensorflow.python.keras.preprocessing import dataset_utils
@@ -14,22 +15,23 @@ from tensorflow.python.ops import io_ops
 
 ALLOWLIST_FORMATS = ('.bmp', '.gif', '.jpeg', '.jpg', '.png')
 
-def merged_dataset_from_directories(rgb_directory,
-                                    of_directory,
-                                    labels='inferred',
-                                    label_mode='int',
-                                    class_names=None,
-                                    color_mode='rgb',
-                                    batch_size=32,
-                                    image_size=(256, 256),
-                                    shuffle=True,
-                                    seed=None,
-                                    validation_split=None,
-                                    subset=None,
-                                    interpolation='bilinear',
-                                    follow_links=False,
-                                    crop_to_aspect_ratio=False,
-                                    **kwargs):
+def timedistributed_dataset_from_directory(image_directory,
+                                           labels='inferred',
+                                           label_mode='int',
+                                           class_names=None,
+                                           color_mode='rgb',
+                                           num_frames=5,
+                                           frame_step=6,
+                                           batch_size=32,
+                                           image_size=(256, 256),
+                                           shuffle=True,
+                                           seed=None,
+                                           validation_split=None,
+                                           subset=None,
+                                           interpolation='bilinear',
+                                           follow_links=False,
+                                           crop_to_aspect_ratio=False,
+                                           **kwargs):
   """Generates a `tf.data.Dataset` from image files in a directory.
 
   If your directory structure is:
@@ -172,8 +174,8 @@ def merged_dataset_from_directories(rgb_directory,
 
   if seed is None:
     seed = np.random.randint(1e6)
-  of_image_paths, labels, class_names = dataset_utils.index_directory(
-      of_directory,
+  image_paths, labels, class_names = dataset_utils.index_directory(
+      image_directory,
       labels,
       formats=ALLOWLIST_FORMATS,
       class_names=class_names,
@@ -181,52 +183,57 @@ def merged_dataset_from_directories(rgb_directory,
       seed=seed,
       follow_links=follow_links)
 
-  dir_of = os.path.abspath(of_directory.rstrip("/"))
-  dir_rgb = os.path.abspath(rgb_directory.rstrip("/"))
-  #print("dir_of=", dir_of)
-  #print("dir_rgb=", dir_rgb)
-  rgb_image_paths = []
-  for of_path in of_image_paths:
-      rgb_path = of_path.replace(dir_of, dir_rgb)
-      # print("add path", rgb_path, "created from", of_path)
-      if not os.access(rgb_path, os.R_OK):
-          raise TypeError(f'no such file: {rgb_path}')
-      rgb_image_paths.append(rgb_path)
-
   if label_mode == 'binary' and len(class_names) != 2:
     raise ValueError(
         'When passing `label_mode="binary", there must exactly 2 classes. '
         'Found the following classes: %s' % (class_names,))
 
-  of_image_paths, labels = dataset_utils.get_training_or_validation_split(
-      of_image_paths, labels, validation_split, subset)
-  rgb_image_paths, _ = dataset_utils.get_training_or_validation_split(
-      rgb_image_paths, labels, validation_split, subset)
+  filtered_image_paths = []
+  filtered_labels = []
+  image_path_set = set(image_paths)
+  for path, label in sorted(zip(image_paths, labels)):
+    dirname = os.path.dirname(path)
+    filename = os.path.basename(path)
+    fields = filename.split("_")
+    if len(fields) > 2:
+      frame_num = int(fields[1])
+    chunk_size = num_frames * frame_step
+    frame_pos_in_chunk = frame_num % chunk_size
+    if frame_pos_in_chunk < frame_step:
+      all_ok = True
+      for i in range(num_frames):
+        fields[1] = str(frame_num)
+        filename = "_".join(fields)
+        fullname = os.path.join(dirname, filename)
+        frame_num += frame_step
+        if fullname not in image_path_set:
+          #print("not found:", fullname)
+          all_ok = False
+          break
+      if all_ok:
+        filtered_image_paths.append(path)
+        filtered_labels.append(label)
+      #print(path, label)
+  image_paths = filtered_image_paths
+  labels = filtered_labels
 
-  if not of_image_paths:
-    raise ValueError('No OF images found.')
-  if not rgb_image_paths:
-    raise ValueError('No RGB images found.')
+  image_paths, labels = dataset_utils.get_training_or_validation_split(
+      image_paths, labels, validation_split, subset)
+
+  if not image_paths:
+    raise ValueError('No images found.')
 
   num_classes=len(class_names)
 
-  of_dataset = paths_and_labels_to_dataset(
-      image_paths=of_image_paths,
-      image_size=image_size,
-      num_channels=num_channels,
-      num_classes=num_classes,
-      interpolation=interpolation,
-      crop_to_aspect_ratio=crop_to_aspect_ratio)
-
-  rgb_dataset = paths_and_labels_to_dataset(
-      image_paths=rgb_image_paths,
-      image_size=image_size,
-      num_channels=num_channels,
-      num_classes=num_classes,
-      interpolation=interpolation,
-      crop_to_aspect_ratio=crop_to_aspect_ratio)
-
-  img_dataset = dataset_ops.Dataset.zip((rgb_dataset, of_dataset))
+  img_dataset = paths_and_labels_to_dataset(
+      image_paths,
+      image_size,
+      num_frames,
+      frame_step,
+      num_channels,
+      num_classes,
+      interpolation,
+      crop_to_aspect_ratio)
 
   if label_mode:
     label_dataset = dataset_utils.labels_to_dataset(labels, label_mode, num_classes)
@@ -241,34 +248,52 @@ def merged_dataset_from_directories(rgb_directory,
   # Users may need to reference `class_names`.
   dataset.class_names = class_names
   # Include file paths for images as attribute.
-  dataset.file_paths = of_image_paths
+  dataset.file_paths = image_paths
   return dataset
 
 
 def paths_and_labels_to_dataset(image_paths,
                                 image_size,
+                                num_frames,
+                                frame_step,
                                 num_channels,
                                 num_classes,
                                 interpolation,
                                 crop_to_aspect_ratio=False):
   """Constructs a dataset of images and labels."""
-  # TODO(fchollet): consider making num_parallel_calls settable
-  path_ds = dataset_ops.Dataset.from_tensor_slices(image_paths)
-  args = (image_size, num_channels, interpolation, crop_to_aspect_ratio)
-  img_ds = path_ds.map(
-      lambda x: load_image(x, *args))
+  images = []
+  for path in image_paths:
+    images.append(load_image(path, image_size, num_frames, frame_step, num_channels, interpolation, crop_to_aspect_ratio))
+  img_ds = dataset_ops.Dataset.from_tensor_slices(images)
   return img_ds
 
-def load_image(path, image_size, num_channels, interpolation,
+
+def load_image(path, image_size,
+               num_frames, frame_step,
+               num_channels, interpolation,
                crop_to_aspect_ratio=False):
   """Load an image from a path and resize it."""
-  img = io_ops.read_file(path)
-  img = image_ops.decode_image(
+  dirname = os.path.dirname(path)
+  basename = os.path.basename(path)
+  fields = basename.split("_")
+  frame_num = int(fields[1])
+  imgs = []
+
+  for i in range(num_frames):
+    fields[1] = str(frame_num)
+    filename = "_".join(fields)
+    fullname = os.path.join(dirname, filename)
+    frame_num += frame_step
+    img = io_ops.read_file(fullname)
+    img = image_ops.decode_image(
       img, channels=num_channels, expand_animations=False)
-  if crop_to_aspect_ratio:
-    img = keras_image_ops.smart_resize(img, image_size,
-                                       interpolation=interpolation)
-  else:
-    img = image_ops.resize_images_v2(img, image_size, method=interpolation)
-  img.set_shape((image_size[0], image_size[1], num_channels))
-  return img
+
+    if crop_to_aspect_ratio:
+      img = keras_image_ops.smart_resize(img, image_size,
+                                         interpolation=interpolation)
+    else:
+      img = image_ops.resize_images_v2(img, image_size, method=interpolation)
+
+    img.set_shape((image_size[0], image_size[1], num_channels))
+    imgs.append(img)
+  return tf.convert_to_tensor(imgs, dtype=tf.float32)

@@ -79,8 +79,8 @@ def get_time_distributed_model(num_frames, num_trainable_layers=0):
     INPUT_SHAPE = (num_frames,) + IMG_SHAPE
     inputs = tf.keras.Input(shape=INPUT_SHAPE)
     x = inputs
-    # data augmentation cannot be done here: it's instead done in the dataset generator code
-    #x = data_augmentation(x)
+    # TODO: how to do data augmentation here?!
+    # x = data_augmentation(x)
     x = preprocess_input(x)
     x = tf.keras.layers.TimeDistributed(base_model)(x)
     x = tf.keras.layers.GRU(256)(x)
