@@ -191,7 +191,7 @@ def timedistributed_dataset_from_directory(image_directory,
   filtered_image_paths = []
   filtered_labels = []
   image_path_set = set(image_paths)
-  for path, label in sorted(zip(image_paths, labels)):
+  for path, label in zip(image_paths, labels):
     dirname = os.path.dirname(path)
     filename = os.path.basename(path)
     fields = filename.split("_")
@@ -281,23 +281,6 @@ def paths_and_labels_to_dataset(image_paths,
   img_ds = path_ds.map(
       lambda x: load_image(x, *args))
   return img_ds
-
-
-def load_image_old(path, image_size,
-                   num_channels, interpolation,
-               crop_to_aspect_ratio=False):
-  """Load an image from a path and resize it."""
-  img = io_ops.read_file(path)
-  img = image_ops.decode_image(
-      img, channels=num_channels, expand_animations=False)
-  if crop_to_aspect_ratio:
-    img = keras_image_ops.smart_resize(img, image_size,
-                                       interpolation=interpolation)
-  else:
-    img = image_ops.resize_images_v2(img, image_size, method=interpolation)
-  img.set_shape((image_size[0], image_size[1], num_channels))
-  return tf.convert_to_tensor([img, img, img, img, img], dtype=tf.float32)
-
 
 
 def load_image(path, image_size,
