@@ -7,8 +7,8 @@ import tensorflow as tf
 from generator_timedistributed import timedistributed_dataset_from_directory
 
 # make sure to provide correct paths to the folders on your machine
-data_dir = '../kaggle-dataset-6classes/videos/trainval'
-test_data_dir = '../kaggle-dataset-6classes/videos/test'
+data_dir = '../kaggle-dataset-6classes/frames/trainval'
+test_data_dir = '../kaggle-dataset-6classes/frames/test'
 
 BATCH_SIZE = 4
 

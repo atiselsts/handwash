@@ -7,8 +7,8 @@ from generator_timedistributed import timedistributed_dataset_from_directory
 import tensorflow as tf
 
 # make sure to provide correct paths to the folders on your machine
-data_dir = '/data/handwash/RSU_MITC_preprocessed/videos/trainval'
-test_data_dir = '/data/handwash/RSU_MITC_preprocessed/videos/test'
+data_dir = '/data/handwash/RSU_MITC_preprocessed/frames/trainval'
+test_data_dir = '/data/handwash/RSU_MITC_preprocessed/frames/test'
 
 BATCH_SIZE = 32
 
