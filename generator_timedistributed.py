@@ -261,30 +261,53 @@ def paths_and_labels_to_dataset(image_paths,
                                 interpolation,
                                 crop_to_aspect_ratio=False):
   """Constructs a dataset of images and labels."""
-  images = []
+  image_paths_multi = []
   for path in image_paths:
-    images.append(load_image(path, image_size, num_frames, frame_step, num_channels, interpolation, crop_to_aspect_ratio))
-  img_ds = dataset_ops.Dataset.from_tensor_slices(images)
+    dirname = os.path.dirname(path)
+    basename = os.path.basename(path)
+    fields = basename.split("_")
+    frame_num = int(fields[1])
+    paths = []
+    for i in range(num_frames):
+      fields[1] = str(frame_num)
+      filename = "_".join(fields)
+      fullname = os.path.join(dirname, filename)
+      paths.append(fullname)
+      frame_num += frame_step
+    image_paths_multi.append(paths)
+
+  path_ds = dataset_ops.Dataset.from_tensor_slices(image_paths_multi)
+  args = (image_size, num_channels, interpolation, crop_to_aspect_ratio)
+  img_ds = path_ds.map(
+      lambda x: load_image(x, *args))
   return img_ds
 
 
+def load_image_old(path, image_size,
+                   num_channels, interpolation,
+               crop_to_aspect_ratio=False):
+  """Load an image from a path and resize it."""
+  img = io_ops.read_file(path)
+  img = image_ops.decode_image(
+      img, channels=num_channels, expand_animations=False)
+  if crop_to_aspect_ratio:
+    img = keras_image_ops.smart_resize(img, image_size,
+                                       interpolation=interpolation)
+  else:
+    img = image_ops.resize_images_v2(img, image_size, method=interpolation)
+  img.set_shape((image_size[0], image_size[1], num_channels))
+  return tf.convert_to_tensor([img, img, img, img, img], dtype=tf.float32)
+
+
+
 def load_image(path, image_size,
-               num_frames, frame_step,
                num_channels, interpolation,
                crop_to_aspect_ratio=False):
   """Load an image from a path and resize it."""
-  dirname = os.path.dirname(path)
-  basename = os.path.basename(path)
-  fields = basename.split("_")
-  frame_num = int(fields[1])
   imgs = []
-
+  num_frames = len(path)
   for i in range(num_frames):
-    fields[1] = str(frame_num)
-    filename = "_".join(fields)
-    fullname = os.path.join(dirname, filename)
-    frame_num += frame_step
-    img = io_ops.read_file(fullname)
+    img = io_ops.read_file(path[i])
     img = image_ops.decode_image(
       img, channels=num_channels, expand_animations=False)
 
