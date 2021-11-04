@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import os
-from classify_dataset import evaluate, get_time_distributed_model, IMG_SIZE, N_CLASSES, N_CHANNELS
+from classify_dataset import evaluate, get_time_distributed_model, IMG_SIZE, N_CLASSES
 from dataset_utilities import get_weights_dict
 import tensorflow as tf
 from generator_timedistributed import timedistributed_dataset_from_directory
