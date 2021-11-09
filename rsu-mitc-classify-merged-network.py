@@ -12,7 +12,7 @@ from generator_rgb_with_of import merged_dataset_from_directories
 import tensorflow as tf
 
 # reduce the batch size
-batch_size //= 2
+#batch_size //= 2
 
 # make sure to provide correct paths to the folders on your machine
 rgb_dir = '/data/handwash/RSU_MITC_preprocessed/frames/trainval'
