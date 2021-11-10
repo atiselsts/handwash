@@ -63,7 +63,7 @@ def get_default_model(num_trainable_layers=0):
     x = preprocess_input(x)
     x = base_model(x, training=False)
     x = tf.keras.layers.Flatten()(x)
-    x = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer='l1_l2')(x)
+    #x = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer='l1_l2')(x)
     outputs = tf.keras.layers.Dense(N_CLASSES, activation='softmax')(x)
     model = tf.keras.Model(inputs, outputs)
     print(model.summary())
@@ -216,7 +216,7 @@ def fit_model(name, model, train_ds, val_ds, test_ds, num_epochs, weights_dict):
     test_loss, test_accuracy = model.evaluate(test_ds)
     result_str = 'Test loss: {} accuracy: {}\n'.format(test_loss, test_accuracy)
     print(result_str)
-    with open("results-on-test-ds-{}.txt".format(name), "w") as f:
+    with open("results-{}.txt".format(name), "w") as f:
         f.write(result_str)
 
     measure_performance("validation", name, model, val_ds)
@@ -224,23 +224,17 @@ def fit_model(name, model, train_ds, val_ds, test_ds, num_epochs, weights_dict):
 
 
 def measure_performance(ds_name, name, model, ds, num_classes=N_CLASSES):
-    y_true = []
-    y_predicted = []
     n = 0
+    matrix = [[0] * num_classes for i in range(num_classes)]
     for batch in ds:
         b1, b2 = batch
         #print(b1)
         predicted = model.predict(b1)
         for y_pred, y_t in zip(predicted, b2):
-            y_predicted.append(int(np.argmax(y_pred)))
-            y_true.append(int(np.argmax(y_t)))
+            y_predicted = int(np.argmax(y_pred))
+            y_true = int(np.argmax(y_t))
+            matrix[y_true][y_predicted] += 1
             n += 1
-
-    matrix = [[0] * num_classes for i in range(num_classes)]
-    for actual, predicted in zip(y_true, y_predicted):
-        if actual == -1:
-            continue
-        matrix[actual][predicted] += 1
 
     print("Confusion matrix:")
     for row in matrix:
@@ -267,7 +261,7 @@ def measure_performance(ds_name, name, model, ds, num_classes=N_CLASSES):
         f1_scores.append(f1)
     s = "Average {} F1 score: {:.2f}\n".format(ds_name, np.mean(f1_scores))
     print(s)
-    with open("results-on-test-ds-{}.txt".format(name), "a+") as f:
+    with open("results-{}.txt".format(name), "a+") as f:
        f.write(s)
 
 
