@@ -145,9 +145,13 @@ def get_time_distributed_model(num_frames, num_trainable_layers=0):
 
 
 def get_merged_model(num_trainable_layers=0):
-    base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
-                                                   include_top=False,
-                                                   weights='imagenet')
+    rgb_base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
+                                                       include_top=False,
+                                                       weights='imagenet')
+
+    of_base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
+                                                      include_top=False,
+                                                      weights='imagenet')
 
     freeze_model(base_model, num_trainable_layers)
 
@@ -155,7 +159,7 @@ def get_merged_model(num_trainable_layers=0):
     rgb_network_input = tf.keras.Input(shape=IMG_SHAPE)
     rgb_network = data_augmentation(rgb_network_input)
     rgb_network = preprocess_input(rgb_network)
-    rgb_network = base_model(rgb_network, training=False)
+    rgb_network = rgb_base_model(rgb_network, training=False)
     rgb_network = tf.keras.layers.Flatten()(rgb_network)
     rgb_network = tf.keras.Model(rgb_network_input, rgb_network)
 
@@ -165,7 +169,7 @@ def get_merged_model(num_trainable_layers=0):
     of_network_input = tf.keras.Input(shape=IMG_SHAPE)
     of_network = data_augmentation(of_network_input)
     of_network = preprocess_input(of_network)
-    of_network = base_model(of_network, training=False)
+    of_network = of_base_model(of_network, training=False)
     of_network = tf.keras.layers.Flatten()(of_network)
     of_network = tf.keras.Model(of_network_input, of_network)
 
@@ -226,15 +230,23 @@ def fit_model(name, model, train_ds, val_ds, test_ds, num_epochs, weights_dict):
 def measure_performance(ds_name, name, model, ds, num_classes=N_CLASSES):
     n = 0
     matrix = [[0] * num_classes for i in range(num_classes)]
+    y_true = []
     for batch in ds:
-        b1, b2 = batch
-        #print(b1)
-        predicted = model.predict(b1)
-        for y_pred, y_t in zip(predicted, b2):
-            y_predicted = int(np.argmax(y_pred))
-            y_true = int(np.argmax(y_t))
-            matrix[y_true][y_predicted] += 1
-            n += 1
+      _, labels = batch
+      for label in labels:
+        y = int(np.argmax(label))
+        y_true.append(y)
+
+    print("labels extracted!")
+    predicted = model.predict(ds)
+    print("predictions done")
+    y_pred = []
+    for p in predicted:
+       y_pred.append(int(np.argmax(p)))
+    print("predictions extracted")
+
+    for y_p, y_t in zip(y_pred, y_true):
+        matrix[y_t][y_p] += 1
 
     print("Confusion matrix:")
     for row in matrix:
@@ -265,7 +277,7 @@ def measure_performance(ds_name, name, model, ds, num_classes=N_CLASSES):
        f.write(s)
 
 
-def evaluate(name, train_ds, val_ds, test_ds, weights_dict={}, num_epochs=1, num_trainable_layers=0, model=None):
+def evaluate(name, train_ds, val_ds, test_ds, weights_dict={}, num_epochs=20, num_trainable_layers=0, model=None):
     if model is None:
         model = get_default_model(num_trainable_layers)
 
