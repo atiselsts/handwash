@@ -153,7 +153,8 @@ def get_merged_model(num_trainable_layers=0):
                                                       include_top=False,
                                                       weights='imagenet')
 
-    freeze_model(base_model, num_trainable_layers)
+    freeze_model(rgb_base_model, num_trainable_layers)
+    freeze_model(of_base_model, num_trainable_layers)
 
     # Build the model
     rgb_network_input = tf.keras.Input(shape=IMG_SHAPE)
