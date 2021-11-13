@@ -32,6 +32,7 @@ train_ds = merged_dataset_from_directories(
     image_size=IMG_SIZE,
     shuffle=True,
     label_mode='categorical',
+    crop_to_aspect_ratio=False,
     batch_size=batch_size)
 
 val_ds = merged_dataset_from_directories(
@@ -43,6 +44,7 @@ val_ds = merged_dataset_from_directories(
     image_size=IMG_SIZE,
     shuffle=True,
     label_mode='categorical',
+    crop_to_aspect_ratio=False,
     batch_size=batch_size)
 
 test_ds = merged_dataset_from_directories(
@@ -52,6 +54,7 @@ test_ds = merged_dataset_from_directories(
     image_size=IMG_SIZE,
     shuffle=False,
     label_mode='categorical',
+    crop_to_aspect_ratio=False,
     batch_size=batch_size)
 
 # to improve performance, use buffered prefetching to load images

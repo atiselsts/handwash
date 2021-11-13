@@ -29,6 +29,7 @@ train_ds = timedistributed_dataset_from_directory(
     image_size=IMG_SIZE,
     shuffle=True,
     label_mode='categorical',
+    crop_to_aspect_ratio=False,
     batch_size=BATCH_SIZE)
 
 val_ds = timedistributed_dataset_from_directory(
@@ -41,6 +42,7 @@ val_ds = timedistributed_dataset_from_directory(
     image_size=IMG_SIZE,
     shuffle=True,
     label_mode='categorical',
+    crop_to_aspect_ratio=False,
     batch_size=BATCH_SIZE)
 
 test_ds = timedistributed_dataset_from_directory(
@@ -51,6 +53,7 @@ test_ds = timedistributed_dataset_from_directory(
     image_size=IMG_SIZE,
     shuffle=False,
     label_mode='categorical',
+    crop_to_aspect_ratio=False,
     batch_size=BATCH_SIZE)
 
 weights_dict = get_weights_dict(data_dir, CLASS_NAMES)

@@ -130,9 +130,6 @@ def get_time_distributed_model(num_frames, num_trainable_layers=0):
     INPUT_SHAPE = (num_frames,) + IMG_SHAPE
     inputs = tf.keras.Input(shape=INPUT_SHAPE)
     x = inputs
-    # TODO: how to do data augmentation here?!
-    # x = data_augmentation(x)
-    #x = preprocess_input(x)
     x = tf.keras.layers.TimeDistributed(base_model)(x)
     x = tf.keras.layers.GRU(256)(x)
 #    x = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer='l1_l2')(x)
@@ -229,24 +226,35 @@ def fit_model(name, model, train_ds, val_ds, test_ds, num_epochs, weights_dict):
 
 
 def measure_performance(ds_name, name, model, ds, num_classes=N_CLASSES):
-    n = 0
+#    n = 0
     matrix = [[0] * num_classes for i in range(num_classes)]
+
+#    predicted = model.predict(ds)
+
+#    y_true = []
+#    for batch in ds:
+#      _, labels = batch
+#      for label in labels:
+#        y = int(np.argmax(label))
+#        y_true.append(y)
+
+#    y_pred = []
+#    for p in predicted:
+#       y_pred.append(int(np.argmax(p)))
+
+    y_predicted = []
     y_true = []
+
+    n = 0
     for batch in ds:
-      _, labels = batch
-      for label in labels:
-        y = int(np.argmax(label))
-        y_true.append(y)
+        b1, b2 = batch
+        predicted = model.predict(b1)
+        for y_p, y_t in zip(predicted, b2):
+            y_predicted.append(int(np.argmax(y_p)))
+            y_true.append(int(np.argmax(y_t)))
+            n += 1
 
-    print("labels extracted!")
-    predicted = model.predict(ds)
-    print("predictions done")
-    y_pred = []
-    for p in predicted:
-       y_pred.append(int(np.argmax(p)))
-    print("predictions extracted")
-
-    for y_p, y_t in zip(y_pred, y_true):
+    for y_p, y_t in zip(y_predicted, y_true):
         matrix[y_t][y_p] += 1
 
     print("Confusion matrix:")

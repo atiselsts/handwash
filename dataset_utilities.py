@@ -17,6 +17,7 @@ def get_datasets(data_dir, test_data_dir, batch_size=None):
         seed=123,
         image_size=classify_dataset.IMG_SIZE,
         label_mode='categorical',
+        crop_to_aspect_ratio=False,
         batch_size=batch_size)
 
     val_ds = tf.keras.preprocessing.image_dataset_from_directory(
@@ -26,6 +27,7 @@ def get_datasets(data_dir, test_data_dir, batch_size=None):
         seed=123,
         image_size=IMG_SIZE,
         label_mode='categorical',
+        crop_to_aspect_ratio=False,
         batch_size=batch_size)
 
     test_ds = tf.keras.preprocessing.image_dataset_from_directory(
@@ -33,6 +35,7 @@ def get_datasets(data_dir, test_data_dir, batch_size=None):
         seed=123,
         image_size=IMG_SIZE,
         label_mode='categorical',
+        crop_to_aspect_ratio=False,
         batch_size=batch_size)
 
     weights_dict = get_weights_dict(data_dir, train_ds.class_names)
