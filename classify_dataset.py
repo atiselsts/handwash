@@ -92,6 +92,7 @@ def get_default_model(name="MobileNetV2", num_trainable_layers=0):
     return model
 
 
+# This also fits to Xception and InceptionV3! But maybe not MobileNetV3
 class MobileNetPreprocessingLayer(Layer):
     def __init__(self, **kwargs):
         super(MobileNetPreprocessingLayer, self).__init__(**kwargs)
@@ -133,13 +134,9 @@ def get_time_distributed_model(num_frames, name="MobileNetV2", num_trainable_lay
     single_frame_inputs = tf.keras.Input(IMG_SHAPE)
     x = single_frame_inputs
     x = data_augmentation(x)
-    if name == "MobileNetV2":
-        # use a custom layer because otherwise cannot be converted to tflite
-        x = MobileNetPreprocessingLayer()(x)
-    else:
-        # potential TODO: check if can be converted to tflite!
-        x = get_preprocessing_function(name)(x)
-    single_frame_outputs = single_frame_model(x, training=False)
+    # use a custom layer because otherwise cannot be converted to tflite
+    x = MobileNetPreprocessingLayer()(x)
+    single_frame_outputs = base_model(x, training=False)
     single_frame_model = tf.keras.Model(single_frame_inputs, single_frame_outputs)
 
     # Build the time distributed model
@@ -182,7 +179,7 @@ def get_merged_model(name="MobileNetV2", num_trainable_layers=0):
     else:
         print("Unknown model name", name)
         exit(-1)
-    
+
     freeze_model(rgb_base_model, num_trainable_layers)
     freeze_model(of_base_model, num_trainable_layers)
 
@@ -199,7 +196,7 @@ def get_merged_model(name="MobileNetV2", num_trainable_layers=0):
 
     of_network_input = tf.keras.Input(shape=IMG_SHAPE)
     of_network = data_augmentation(of_network_input)
-    of_network = get_preprocessing_function()(of_network)
+    of_network = get_preprocessing_function(name)(of_network)
     of_network = of_base_model(of_network, training=False)
     of_network = tf.keras.layers.Flatten()(of_network)
     of_network = tf.keras.Model(of_network_input, of_network)
@@ -230,7 +227,7 @@ def fit_model(name, model, train_ds, val_ds, test_ds, num_epochs, weights_dict):
                         epochs=num_epochs,
                         validation_data=val_ds,
                         class_weight=weights_dict,
-                        callbacks=[es, mc])
+                        callbacks=[es]) # add mc to save after each epoch
 
     # visualise accuracy
     train_acc = history.history['accuracy']
@@ -256,6 +253,8 @@ def fit_model(name, model, train_ds, val_ds, test_ds, num_epochs, weights_dict):
 
     measure_performance("validation", name, model, val_ds)
     measure_performance("test", name, model, test_ds)
+
+    model.save(name + "final-model")
 
 
 def measure_performance(ds_name, name, model, ds, num_classes=N_CLASSES):
