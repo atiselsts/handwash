@@ -58,6 +58,7 @@ test_ds = timedistributed_dataset_from_directory(
 
 weights_dict = get_weights_dict(data_dir, CLASS_NAMES)
 
-model = get_time_distributed_model(N_FRAMES)
+model_name = os.getenv("HANDWASH_NN", "MobileNetV2")
+model = get_time_distributed_model(N_FRAMES, model_name)
 
 evaluate("rsu-mitc-videos", train_ds, val_ds, test_ds, weights_dict, model=model)
