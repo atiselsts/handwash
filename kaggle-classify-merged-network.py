@@ -11,9 +11,6 @@ from generator_rgb_with_of import merged_dataset_from_directories
 
 import tensorflow as tf
 
-# reduce batch size 2 times
-batch_size //= 2
-
 # make sure to provide correct paths to the folders on your machine
 rgb_dir = '../kaggle-dataset-6classes/frames/trainval'
 of_dir = '../kaggle-dataset-6classes/of/trainval'

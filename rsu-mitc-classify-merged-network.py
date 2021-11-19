@@ -66,7 +66,6 @@ test_ds = test_ds.prefetch(buffer_size=AUTOTUNE)
 
 weights_dict = get_weights_dict(rgb_dir, CLASS_NAMES)
 
-model_name = os.getenv("HANDWASH_NN", "MobileNetV2")
-model = get_merged_model(model_name)
+model = get_merged_model()
 
 evaluate("rsu-mitc-merged", train_ds, val_ds, test_ds, weights_dict, model=model)

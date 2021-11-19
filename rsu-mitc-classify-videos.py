@@ -1,28 +1,21 @@
 #!/usr/bin/env python3
 
-import os
-from classify_dataset import evaluate, get_time_distributed_model, IMG_SIZE, N_CLASSES
+from classify_dataset import evaluate, get_time_distributed_model, IMG_SIZE, N_CLASSES, num_frames, batch_size
 from dataset_utilities import get_weights_dict
 from generator_timedistributed import timedistributed_dataset_from_directory
-import tensorflow as tf
 
 # make sure to provide correct paths to the folders on your machine
 data_dir = '/data/handwash/RSU_MITC_preprocessed/frames/trainval'
 test_data_dir = '/data/handwash/RSU_MITC_preprocessed/frames/test'
 
-BATCH_SIZE = 32
-
 FPS = 16
 
 CLASS_NAMES = [str(i) for i in range(N_CLASSES)]
 
-# how many frames to concatenate as input to the network
-N_FRAMES = 5
-
 train_ds = timedistributed_dataset_from_directory(
     data_dir,
-    num_frames=N_FRAMES,
-    frame_step=FPS // N_FRAMES,
+    num_frames=num_frames,
+    frame_step=FPS // num_frames,
     validation_split=0.2,
     subset="training",
     seed=123,
@@ -30,12 +23,12 @@ train_ds = timedistributed_dataset_from_directory(
     shuffle=True,
     label_mode='categorical',
     crop_to_aspect_ratio=False,
-    batch_size=BATCH_SIZE)
+    batch_size=batch_size)
 
 val_ds = timedistributed_dataset_from_directory(
     data_dir,
-    num_frames=N_FRAMES,
-    frame_step=FPS // N_FRAMES,
+    num_frames=num_frames,
+    frame_step=FPS // num_frames,
     validation_split=0.2,
     subset="validation",
     seed=123,
@@ -43,22 +36,21 @@ val_ds = timedistributed_dataset_from_directory(
     shuffle=True,
     label_mode='categorical',
     crop_to_aspect_ratio=False,
-    batch_size=BATCH_SIZE)
+    batch_size=batch_size)
 
 test_ds = timedistributed_dataset_from_directory(
     test_data_dir,
-    num_frames=N_FRAMES,
-    frame_step=FPS // N_FRAMES,
+    num_frames=num_frames,
+    frame_step=FPS // num_frames,
     seed=123,
     image_size=IMG_SIZE,
     shuffle=False,
     label_mode='categorical',
     crop_to_aspect_ratio=False,
-    batch_size=BATCH_SIZE)
+    batch_size=batch_size)
 
 weights_dict = get_weights_dict(data_dir, CLASS_NAMES)
 
-model_name = os.getenv("HANDWASH_NN", "MobileNetV2")
-model = get_time_distributed_model(N_FRAMES, model_name)
+model = get_time_distributed_model()
 
 evaluate("rsu-mitc-videos", train_ds, val_ds, test_ds, weights_dict, model=model)

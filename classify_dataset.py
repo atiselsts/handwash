@@ -1,3 +1,5 @@
+import os
+import gc
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -12,8 +14,6 @@ if len(physical_devices):
 
 # Define parameters for the dataset loader.
 # Adjust batch size according to the memory volume of your GPU;
-# 16 works well on most GPU
-# 256 works well on NVIDIA RTX 3090 with 24 GB VRAM
 batch_size = 32
 img_width = 320
 img_height = 240
@@ -23,17 +23,21 @@ IMG_SHAPE = IMG_SIZE + (N_CHANNELS,)
 
 N_CLASSES = 7
 
+# get environmental variables that control the execution
+model_name = os.getenv("HANDWASH_NN", "MobileNetV2")
+num_trainable_layers = int(os.getenv("HANDWASH_NUM_LAYERS", 0))
+num_epochs = int(os.getenv("HANDWASH_NUM_EPOCHS", 20))
+# how many frames to concatenate as input to the TimeDistributed network?
+num_frames = int(os.getenv("HANDWASH_NUM_FRAMES", 5))
+suffix = os.getenv("HANDWASH_SUFFIX", "")
+
 # data augmentation
 data_augmentation = tf.keras.Sequential([
     tf.keras.layers.experimental.preprocessing.RandomFlip('horizontal'),
     tf.keras.layers.experimental.preprocessing.RandomRotation(0.2),
 ])
 
-# rescale pixel values
-#preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
-
-
-def freeze_model(model, num_trainable_layers):
+def freeze_model(model):
     if num_trainable_layers == 0:
         for layer in model.layers:
             layer.trainable = False
@@ -51,40 +55,40 @@ def freeze_model(model, num_trainable_layers):
         return True
 
 
-def get_preprocessing_function(name):
-    if name == "MobileNetV2":
+def get_preprocessing_function():
+    if model_name == "MobileNetV2":
         return tf.keras.applications.mobilenet_v2.preprocess_input
-    elif name == "InceptionV3":
+    elif model_name == "InceptionV3":
         return tf.keras.applications.inception_v3.preprocess_input
-    elif name == "Xception":
+    elif model_name == "Xception":
         return tf.keras.applications.xception.preprocess_input
     return None
 
 
-def get_default_model(name="MobileNetV2", num_trainable_layers=3):
-    if name == "MobileNetV2":
+def get_default_model():
+    if model_name == "MobileNetV2":
         base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                        include_top=False,
                                                        weights='imagenet')
-    elif name == "InceptionV3":
+    elif model_name == "InceptionV3":
         base_model = tf.keras.applications.InceptionV3(input_shape=IMG_SHAPE,
                                                        include_top=False,
                                                        weights='imagenet')
-    elif name == "Xception":
+    elif model_name == "Xception":
         base_model = tf.keras.applications.Xception(input_shape=IMG_SHAPE,
                                                     include_top=False,
                                                     weights='imagenet')
     else:
-        print("Unknown model name", name)
+        print("Unknown model name", model_name)
         exit(-1)
 
-    training = freeze_model(base_model, num_trainable_layers)
+    training = freeze_model(base_model)
 
     # Build the model
     inputs = tf.keras.Input(shape=IMG_SHAPE)
     x = inputs
     x = data_augmentation(x)
-    x = get_preprocessing_function(name)(x)
+    x = get_preprocessing_function()(x)
     x = base_model(x, training=training)
     x = tf.keras.layers.Flatten()(x)
     #x = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer='l1_l2')(x)
@@ -110,27 +114,27 @@ class MobileNetPreprocessingLayer(Layer):
         return input_shape
 
 
-def get_time_distributed_model(num_frames, name="MobileNetV2", num_trainable_layers=3):
-    if name == "MobileNetV2":
+def get_time_distributed_model():
+    if model_name == "MobileNetV2":
         base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                        include_top=False,
                                                        pooling='avg',
                                                        weights='imagenet')
-    elif name == "InceptionV3":
+    elif model_name == "InceptionV3":
         base_model = tf.keras.applications.InceptionV3(input_shape=IMG_SHAPE,
                                                        include_top=False,
                                                        pooling='avg',
                                                        weights='imagenet')
-    elif name == "Xception":
+    elif model_name == "Xception":
         base_model = tf.keras.applications.Xception(input_shape=IMG_SHAPE,
                                                     include_top=False,
                                                     pooling='avg',
                                                     weights='imagenet')
     else:
-        print("Unknown model name", name)
+        print("Unknown model name", model_name)
         exit(-1)
 
-    training = freeze_model(base_model, num_trainable_layers)
+    training = freeze_model(base_model)
 
 
     # Build the base model
@@ -157,22 +161,22 @@ def get_time_distributed_model(num_frames, name="MobileNetV2", num_trainable_lay
 
 
 
-def get_merged_model(name="MobileNetV2", num_trainable_layers=3):
-    if name == "MobileNetV2":
+def get_merged_model():
+    if model_name == "MobileNetV2":
         rgb_base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                            include_top=False,
                                                            weights='imagenet')
         of_base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                           include_top=False,
                                                           weights='imagenet')
-    elif name == "InceptionV3":
+    elif model_name == "InceptionV3":
         rgb_base_model = tf.keras.applications.InceptionV3(input_shape=IMG_SHAPE,
                                                            include_top=False,
                                                            weights='imagenet')
         of_base_model = tf.keras.applications.InceptionV3(input_shape=IMG_SHAPE,
                                                           include_top=False,
                                                           weights='imagenet')
-    elif name == "Xception":
+    elif model_name == "Xception":
         rgb_base_model = tf.keras.applications.Xception(input_shape=IMG_SHAPE,
                                                            include_top=False,
                                                            weights='imagenet')
@@ -180,16 +184,16 @@ def get_merged_model(name="MobileNetV2", num_trainable_layers=3):
                                                           include_top=False,
                                                           weights='imagenet')
     else:
-        print("Unknown model name", name)
+        print("Unknown model name", model_name)
         exit(-1)
 
-    training = freeze_model(rgb_base_model, num_trainable_layers)
-    freeze_model(of_base_model, num_trainable_layers)
+    training = freeze_model(rgb_base_model)
+    freeze_model(of_base_model)
 
     # Build the model
     rgb_network_input = tf.keras.Input(shape=IMG_SHAPE)
     rgb_network = data_augmentation(rgb_network_input)
-    rgb_network = get_preprocessing_function(name)(rgb_network)
+    rgb_network = get_preprocessing_function()(rgb_network)
     rgb_network = rgb_base_model(rgb_network, training=training)
     rgb_network = tf.keras.layers.Flatten()(rgb_network)
     rgb_network = tf.keras.Model(rgb_network_input, rgb_network)
@@ -199,7 +203,7 @@ def get_merged_model(name="MobileNetV2", num_trainable_layers=3):
 
     of_network_input = tf.keras.Input(shape=IMG_SHAPE)
     of_network = data_augmentation(of_network_input)
-    of_network = get_preprocessing_function(name)(of_network)
+    of_network = get_preprocessing_function()(of_network)
     of_network = of_base_model(of_network, training=training)
     of_network = tf.keras.layers.Flatten()(of_network)
     of_network = tf.keras.Model(of_network_input, of_network)
@@ -218,7 +222,7 @@ def get_merged_model(name="MobileNetV2", num_trainable_layers=3):
     return model
 
 
-def fit_model(name, model, train_ds, val_ds, test_ds, num_epochs, weights_dict):
+def fit_model(name, model, train_ds, val_ds, test_ds, weights_dict):
     # callbacks to implement early stopping and saving the model
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
     mc = ModelCheckpoint(monitor='val_accuracy', mode='max',
@@ -266,13 +270,13 @@ def measure_performance(ds_name, name, model, ds, num_classes=N_CLASSES):
     y_predicted = []
     y_true = []
     n = 0
-    for batch in ds:
-        b1, b2 = batch
-        predicted = model.predict(b1)
-        for y_p, y_t in zip(predicted, b2):
+    for images, labels in ds.take(1):
+        predicted = model.predict(images)
+        for y_p, y_t in zip(predicted, labels):
             y_predicted.append(int(np.argmax(y_p)))
             y_true.append(int(np.argmax(y_t)))
             n += 1
+        gc.collect()
 
     for y_p, y_t in zip(y_predicted, y_true):
         matrix[y_t][y_p] += 1
@@ -306,12 +310,12 @@ def measure_performance(ds_name, name, model, ds, num_classes=N_CLASSES):
        f.write(s)
 
 
-def evaluate(name, train_ds, val_ds, test_ds, weights_dict={}, model_name="MobileNetV2", num_epochs=20, num_trainable_layers=3, model=None):
+def evaluate(name, train_ds, val_ds, test_ds, weights_dict={}, model=None):
     if model is None:
-        model = get_default_model(model_name, num_trainable_layers)
+        model = get_default_model()
 
     model.compile(optimizer='Adam',
                   loss=tf.keras.losses.CategoricalCrossentropy(),
                   metrics=['accuracy'])
 
-    fit_model(name, model, train_ds, val_ds, test_ds, num_epochs, weights_dict)
+    fit_model(name + suffix, model, train_ds, val_ds, test_ds, weights_dict)
