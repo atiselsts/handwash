@@ -37,15 +37,18 @@ def freeze_model(model, num_trainable_layers):
     if num_trainable_layers == 0:
         for layer in model.layers:
             layer.trainable = False
+        return False
     elif num_trainable_layers > 0:
         for layer in model.layers[:-num_trainable_layers]:
             layer.trainable = False
         for layer in model.layers[-num_trainable_layers:]:
             layer.trainable = True
+        return True
     else:
         # num_trainable_layers negative, set all to trainable
         for layer in model.layers:
             layer.trainable = True
+        return True
 
 
 def get_preprocessing_function(name):
@@ -58,7 +61,7 @@ def get_preprocessing_function(name):
     return None
 
 
-def get_default_model(name="MobileNetV2", num_trainable_layers=0):
+def get_default_model(name="MobileNetV2", num_trainable_layers=3):
     if name == "MobileNetV2":
         base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                        include_top=False,
@@ -75,14 +78,14 @@ def get_default_model(name="MobileNetV2", num_trainable_layers=0):
         print("Unknown model name", name)
         exit(-1)
 
-    freeze_model(base_model, num_trainable_layers)
+    training = freeze_model(base_model, num_trainable_layers)
 
     # Build the model
     inputs = tf.keras.Input(shape=IMG_SHAPE)
     x = inputs
     x = data_augmentation(x)
     x = get_preprocessing_function(name)(x)
-    x = base_model(x, training=False)
+    x = base_model(x, training=training)
     x = tf.keras.layers.Flatten()(x)
     #x = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer='l1_l2')(x)
     outputs = tf.keras.layers.Dense(N_CLASSES, activation='softmax')(x)
@@ -107,7 +110,7 @@ class MobileNetPreprocessingLayer(Layer):
         return input_shape
 
 
-def get_time_distributed_model(num_frames, name="MobileNetV2", num_trainable_layers=0):
+def get_time_distributed_model(num_frames, name="MobileNetV2", num_trainable_layers=3):
     if name == "MobileNetV2":
         base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                        include_top=False,
@@ -127,7 +130,7 @@ def get_time_distributed_model(num_frames, name="MobileNetV2", num_trainable_lay
         print("Unknown model name", name)
         exit(-1)
 
-    freeze_model(base_model, num_trainable_layers)
+    training = freeze_model(base_model, num_trainable_layers)
 
 
     # Build the base model
@@ -136,7 +139,7 @@ def get_time_distributed_model(num_frames, name="MobileNetV2", num_trainable_lay
     x = data_augmentation(x)
     # use a custom layer because otherwise cannot be converted to tflite
     x = MobileNetPreprocessingLayer()(x)
-    single_frame_outputs = base_model(x, training=False)
+    single_frame_outputs = base_model(x, training=training)
     single_frame_model = tf.keras.Model(single_frame_inputs, single_frame_outputs)
 
     # Build the time distributed model
@@ -154,7 +157,7 @@ def get_time_distributed_model(num_frames, name="MobileNetV2", num_trainable_lay
 
 
 
-def get_merged_model(name="MobileNetV2", num_trainable_layers=0):
+def get_merged_model(name="MobileNetV2", num_trainable_layers=3):
     if name == "MobileNetV2":
         rgb_base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
                                                            include_top=False,
@@ -180,14 +183,14 @@ def get_merged_model(name="MobileNetV2", num_trainable_layers=0):
         print("Unknown model name", name)
         exit(-1)
 
-    freeze_model(rgb_base_model, num_trainable_layers)
+    training = freeze_model(rgb_base_model, num_trainable_layers)
     freeze_model(of_base_model, num_trainable_layers)
 
     # Build the model
     rgb_network_input = tf.keras.Input(shape=IMG_SHAPE)
     rgb_network = data_augmentation(rgb_network_input)
     rgb_network = get_preprocessing_function(name)(rgb_network)
-    rgb_network = rgb_base_model(rgb_network, training=False)
+    rgb_network = rgb_base_model(rgb_network, training=training)
     rgb_network = tf.keras.layers.Flatten()(rgb_network)
     rgb_network = tf.keras.Model(rgb_network_input, rgb_network)
 
@@ -197,7 +200,7 @@ def get_merged_model(name="MobileNetV2", num_trainable_layers=0):
     of_network_input = tf.keras.Input(shape=IMG_SHAPE)
     of_network = data_augmentation(of_network_input)
     of_network = get_preprocessing_function(name)(of_network)
-    of_network = of_base_model(of_network, training=False)
+    of_network = of_base_model(of_network, training=training)
     of_network = tf.keras.layers.Flatten()(of_network)
     of_network = tf.keras.Model(of_network_input, of_network)
 
@@ -303,7 +306,7 @@ def measure_performance(ds_name, name, model, ds, num_classes=N_CLASSES):
        f.write(s)
 
 
-def evaluate(name, train_ds, val_ds, test_ds, weights_dict={}, model_name="MobileNetV2", num_epochs=20, num_trainable_layers=0, model=None):
+def evaluate(name, train_ds, val_ds, test_ds, weights_dict={}, model_name="MobileNetV2", num_epochs=20, num_trainable_layers=3, model=None):
     if model is None:
         model = get_default_model(model_name, num_trainable_layers)
 
