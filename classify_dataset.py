@@ -152,7 +152,7 @@ def get_time_distributed_model():
     x = inputs
     x = tf.keras.layers.TimeDistributed(single_frame_model)(x)
     x = tf.keras.layers.GRU(256)(x)
-#    x = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer='l1_l2')(x)
+    x = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer='l1_l2')(x)
     outputs = tf.keras.layers.Dense(N_CLASSES, activation='softmax')(x)
     model = tf.keras.Model(inputs, outputs)
     print(model.summary())
@@ -236,6 +236,8 @@ def fit_model(name, model, train_ds, val_ds, test_ds, weights_dict):
                         class_weight=weights_dict,
                         callbacks=[es]) # add mc to save after each epoch
 
+    model.save(name + "final-model")
+
     # visualise accuracy
     train_acc = history.history['accuracy']
     val_acc = history.history['val_accuracy']
@@ -251,17 +253,20 @@ def fit_model(name, model, train_ds, val_ds, test_ds, weights_dict):
     plt.title('Training and Validation Accuracy')
     plt.savefig("accuracy-{}.pdf".format(name), format="pdf")
 
+    # clear the file
+    with open("results-{}.txt".format(name), "a+") as f:
+        pass
+
+    measure_performance("validation", name, model, val_ds)
+    del val_ds
 
     test_loss, test_accuracy = model.evaluate(test_ds)
     result_str = 'Test loss: {} accuracy: {}\n'.format(test_loss, test_accuracy)
     print(result_str)
-    with open("results-{}.txt".format(name), "w") as f:
+    with open("results-{}.txt".format(name), "a+") as f:
         f.write(result_str)
 
-    measure_performance("validation", name, model, val_ds)
     measure_performance("test", name, model, test_ds)
-
-    model.save(name + "final-model")
 
 
 def measure_performance(ds_name, name, model, ds, num_classes=N_CLASSES):
@@ -270,7 +275,7 @@ def measure_performance(ds_name, name, model, ds, num_classes=N_CLASSES):
     y_predicted = []
     y_true = []
     n = 0
-    for images, labels in ds.take(1):
+    for images, labels in ds:
         predicted = model.predict(images)
         for y_p, y_t in zip(predicted, labels):
             y_predicted.append(int(np.argmax(y_p)))
