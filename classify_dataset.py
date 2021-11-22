@@ -152,7 +152,9 @@ def get_time_distributed_model():
     x = inputs
     x = tf.keras.layers.TimeDistributed(single_frame_model)(x)
     x = tf.keras.layers.GRU(256)(x)
-    x = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer='l1_l2')(x)
+#    x = tf.keras.layers.GRU(256, kernel_regularizer='l1_l2', activity_regularizer='l1_l2')(x)
+#    x = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer='l1_l2')(x)
+#    outputs = tf.keras.layers.Dense(N_CLASSES, activation='softmax', kernel_regularizer='l1_l2')(x)
     outputs = tf.keras.layers.Dense(N_CLASSES, activation='softmax')(x)
     model = tf.keras.Model(inputs, outputs)
     print(model.summary())
