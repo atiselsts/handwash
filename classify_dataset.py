@@ -318,10 +318,17 @@ def evaluate(name, train_ds, val_ds, test_ds, weights_dict={}, model=None):
     name_with_suffix = name + suffix
 
     if len(pretrained_model_path):
-        # use a pre-trained model
+
+        # load and use a pre-trained model
         custom_objects = {"MobileNetPreprocessingLayer": MobileNetPreprocessingLayer}
-        model = tf.keras.models.load_model(pretrained_model_path, custom_objects)
-        print("model loaded!")
+        base_model = tf.keras.models.load_model(pretrained_model_path, custom_objects)
+        print("pretrained model loaded!")
+        training = freeze_model(base_model)
+        inputs = tf.keras.Input(shape=base_model.layers.get_output_at(0).get_shape().as_list())
+        # run in inference mode
+        outputs = base_model(inputs, training=training)
+        model = tf.keras.Model(inputs, outputs)
+
         if "kaggle" in pretrained_model_path:
             name_with_suffix += "-pretrained-kaggle"
         elif "mitc" in pretrained_model_path:
@@ -342,6 +349,9 @@ def evaluate(name, train_ds, val_ds, test_ds, weights_dict={}, model=None):
         pass
 
     if len(pretrained_model_path):
+        test_loss, test_accuracy = model.evaluate(test_ds)
+        result_str = 'Test loss: {} accuracy: {}\n'.format(test_loss, test_accuracy)
+
         # evaluate the pre-trained model before the additional training
         measure_performance("test-before-retraining", name_with_suffix, model, test_ds)
 
