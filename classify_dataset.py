@@ -30,6 +30,7 @@ num_epochs = int(os.getenv("HANDWASH_NUM_EPOCHS", 20))
 # how many frames to concatenate as input to the TimeDistributed network?
 num_frames = int(os.getenv("HANDWASH_NUM_FRAMES", 5))
 suffix = os.getenv("HANDWASH_SUFFIX", "")
+pretrained_model_path = os.getenv("HANDWASH_PRETRAINED_MODEL", "")
 
 # data augmentation
 data_augmentation = tf.keras.Sequential([
@@ -255,10 +256,6 @@ def fit_model(name, model, train_ds, val_ds, test_ds, weights_dict):
     plt.title('Training and Validation Accuracy')
     plt.savefig("accuracy-{}.pdf".format(name), format="pdf")
 
-    # clear the file
-    with open("results-{}.txt".format(name), "a+") as f:
-        pass
-
     measure_performance("validation", name, model, val_ds)
     del val_ds
 
@@ -318,11 +315,34 @@ def measure_performance(ds_name, name, model, ds, num_classes=N_CLASSES):
 
 
 def evaluate(name, train_ds, val_ds, test_ds, weights_dict={}, model=None):
-    if model is None:
-        model = get_default_model()
+    name_with_suffix = name + suffix
+
+    if len(pretrained_model_path):
+        # use a pre-trained model
+        custom_objects = {"MobileNetPreprocessingLayer": MobileNetPreprocessingLayer}
+        model = tf.keras.models.load_model(pretrained_model_path, custom_objects)
+        print("model loaded!")
+        if "kaggle" in pretrained_name:
+            name_with_suffix += "-pretrained-kaggle"
+        elif "mitc" in pretrained_name:
+            name_with_suffix += "-pretrained-mitc"
+        elif "pskus" in pretrained_name:
+            name_with_suffix += "-pretrained-pskus"
+    else:
+        # create a new model
+        if model is None:
+            model = get_default_model()
 
     model.compile(optimizer='Adam',
                   loss=tf.keras.losses.CategoricalCrossentropy(),
                   metrics=['accuracy'])
 
-    fit_model(name + suffix, model, train_ds, val_ds, test_ds, weights_dict)
+    # clear the results file
+    with open("results-{}.txt".format(name), "a+") as f:
+        pass
+
+    if len(pretrained_model_path):
+        # evaluate the pre-trained model before the additional training
+        measure_performance("test-before-retraining", name_with_suffix, model, test_ds)
+
+    fit_model(name_with_suffix, model, train_ds, val_ds, test_ds, weights_dict)
