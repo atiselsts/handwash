@@ -322,11 +322,11 @@ def evaluate(name, train_ds, val_ds, test_ds, weights_dict={}, model=None):
         custom_objects = {"MobileNetPreprocessingLayer": MobileNetPreprocessingLayer}
         model = tf.keras.models.load_model(pretrained_model_path, custom_objects)
         print("model loaded!")
-        if "kaggle" in pretrained_name:
+        if "kaggle" in pretrained_model_path:
             name_with_suffix += "-pretrained-kaggle"
-        elif "mitc" in pretrained_name:
+        elif "mitc" in pretrained_model_path:
             name_with_suffix += "-pretrained-mitc"
-        elif "pskus" in pretrained_name:
+        elif "pskus" in pretrained_model_path:
             name_with_suffix += "-pretrained-pskus"
     else:
         # create a new model
