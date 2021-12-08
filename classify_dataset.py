@@ -324,10 +324,12 @@ def evaluate(name, train_ds, val_ds, test_ds, weights_dict={}, model=None):
         base_model = tf.keras.models.load_model(pretrained_model_path, custom_objects)
         print("pretrained model loaded!")
         training = freeze_model(base_model)
-        inputs = tf.keras.Input(shape=base_model.layers.get_output_at(0).get_shape().as_list())
+        inputs = tf.keras.Input(shape=base_model.layers[0].get_output_at(0).get_shape().as_list()[1:])
         # run in inference mode
         outputs = base_model(inputs, training=training)
         model = tf.keras.Model(inputs, outputs)
+        # always train the top layer
+        model.layers[-1].trainable = True
 
         if "kaggle" in pretrained_model_path:
             name_with_suffix += "-pretrained-kaggle"
