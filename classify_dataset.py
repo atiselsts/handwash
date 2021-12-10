@@ -31,6 +31,7 @@ num_epochs = int(os.getenv("HANDWASH_NUM_EPOCHS", 20))
 num_frames = int(os.getenv("HANDWASH_NUM_FRAMES", 5))
 suffix = os.getenv("HANDWASH_SUFFIX", "")
 pretrained_model_path = os.getenv("HANDWASH_PRETRAINED_MODEL", "")
+num_extra_layers = int(os.getenv("HANDWASH_EXTRA_LAYERS", 0))
 
 # data augmentation
 data_augmentation = tf.keras.Sequential([
@@ -92,7 +93,11 @@ def get_default_model():
     x = get_preprocessing_function()(x)
     x = base_model(x, training=training)
     x = tf.keras.layers.Flatten()(x)
-    #x = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer='l1_l2')(x)
+    if num_extra_layers > 0:
+        x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    for i in range(num_extra_layers):
+        x = tf.keras.layers.Dense(128, activation='relu')(x)
+        x = tf.keras.layers.Dropout(0.2)(x)
     outputs = tf.keras.layers.Dense(N_CLASSES, activation='softmax')(x)
     model = tf.keras.Model(inputs, outputs)
     print(model.summary())
@@ -153,9 +158,9 @@ def get_time_distributed_model():
     x = inputs
     x = tf.keras.layers.TimeDistributed(single_frame_model)(x)
     x = tf.keras.layers.GRU(256)(x)
-#    x = tf.keras.layers.GRU(256, kernel_regularizer='l1_l2', activity_regularizer='l1_l2')(x)
-#    x = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer='l1_l2')(x)
-#    outputs = tf.keras.layers.Dense(N_CLASSES, activation='softmax', kernel_regularizer='l1_l2')(x)
+    for i in range(num_extra_layers):
+        x = tf.keras.layers.Dense(128, activation='relu')(x)
+        x = tf.keras.layers.Dropout(0.2)(x)
     outputs = tf.keras.layers.Dense(N_CLASSES, activation='softmax')(x)
     model = tf.keras.Model(inputs, outputs)
     print(model.summary())
@@ -216,7 +221,10 @@ def get_merged_model():
 
     merged = tf.keras.layers.concatenate([rgb_network.output, of_network.output], axis=1)
     merged = tf.keras.layers.Flatten()(merged)
-#    merged = tf.keras.layers.Dense(64, activation='relu', kernel_regularizer='l1_l2')(merged)
+    # XXX: should add a pooling layer here?!
+    for i in range(num_extra_layers):
+        merged = tf.keras.layers.Dense(128, activation='relu')(merged)
+        merged = tf.keras.layers.Dropout(0.2)(merged)
     merged = tf.keras.layers.Dense(N_CLASSES, activation='softmax')(merged)
 
     model = tf.keras.Model([rgb_network.input, of_network.input], merged)
