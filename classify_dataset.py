@@ -93,7 +93,7 @@ def get_default_model():
     x = get_preprocessing_function()(x)
     x = base_model(x, training=training)
     x = tf.keras.layers.Flatten()(x)
-    if num_extra_layers > 0:
+    if num_extra_layers:
         x = tf.keras.layers.GlobalAveragePooling2D()(x)
     for i in range(num_extra_layers):
         x = tf.keras.layers.Dense(128, activation='relu')(x)
@@ -353,6 +353,9 @@ def evaluate(name, train_ds, val_ds, test_ds, weights_dict={}, model=None):
     model.compile(optimizer='Adam',
                   loss=tf.keras.losses.CategoricalCrossentropy(),
                   metrics=['accuracy'])
+
+    if num_extra_layers:
+        name += "-extralayers" + str(num_extra_layers)
 
     # clear the results file
     with open("results-{}.txt".format(name), "a+") as f:
