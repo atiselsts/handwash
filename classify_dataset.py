@@ -92,9 +92,10 @@ def get_default_model():
     x = data_augmentation(x)
     x = get_preprocessing_function()(x)
     x = base_model(x, training=training)
-    x = tf.keras.layers.Flatten()(x)
     if num_extra_layers:
         x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    else:
+        x = tf.keras.layers.Flatten()(x)
     for i in range(num_extra_layers):
         x = tf.keras.layers.Dense(128, activation='relu')(x)
         x = tf.keras.layers.Dropout(0.2)(x)
